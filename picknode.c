@@ -271,11 +271,11 @@ struct Seg *PickNode_visplane(struct Seg *ts, const bbox_t bbox)
  returns int xcoord, int ycoord
 *---------------------------------------------------------------------------*/
 
-void ComputeIntersection(short int *outx,short int *outy)
+void ComputeIntersection(double *outx,double *outy)
 {
 	double a,b,a2,b2,l2,w,d;
 
-	long dx,dy,dx2,dy2;
+	double dx,dy,dx2,dy2;
 
 	dx = pex - psx;
 	dy = pey - psy;
@@ -283,9 +283,9 @@ void ComputeIntersection(short int *outx,short int *outy)
 	dy2 = ley - lsy;
 
 	if (dx == 0 && dy == 0) ProgError("Trouble in ComputeIntersection dx,dy");
-/*	l = (long)sqrt((double)((dx*dx) + (dy*dy)));  unnecessary - killough */
+/*	l = sqrt((dx*dx) + (dy*dy));  unnecessary - killough */
 	if(dx2 == 0 && dy2 == 0) ProgError("Trouble in ComputeIntersection dx2,dy2");
-	l2 = (long)sqrt((double)((dx2*dx2) + (dy2*dy2)));
+	l2 = sqrt((dx2*dx2) + (dy2*dy2));
 
 	a = dx /* / l */;  /* no normalization of a,b necessary,   */
 	b = dy /* / l */;  /* since division by d in formula for w */
@@ -300,20 +300,20 @@ void ComputeIntersection(short int *outx,short int *outy)
 
 		a = lsx+(a2*w);
 		b = lsy+(b2*w);
-                *outx=(a<0) ? -(int)(.5-a) : (int)(.5+a);
-                *outy=(b<0) ? -(int)(.5-b) : (int)(.5+b);
+		*outx=(a<0) ? -(.5-a) : (.5+a);
+		*outy=(b<0) ? -(.5-b) : (.5+b);
 /*
 		modf(a + ((a<0)?-0.5:0.5) ,&w);
 		modf(b + ((b<0)?-0.5:0.5) ,&d);
-                *outx = w;
-                *outy = d;
+		*outx = w;
+		*outy = d;
 */
 		}
-              else
-               {
-         	*outx = lsx;
-        	*outy = lsy;
-               }
+	else
+		{
+		*outx = lsx;
+		*outy = lsy;
+		}
 }
 
 /*---------------------------------------------------------------------------*
@@ -326,16 +326,17 @@ void ComputeIntersection(short int *outx,short int *outy)
  bit 0,1,2 = checking lines starting point and bits 4,5,6 = end point
  these bits mean 	0,4 = point is on the same line
  						1,5 = point is to the left of the line
-						2,6 = point is to the right of the line
+ 						2,6 = point is to the right of the line
  There are some failsafes in here, these mainly check for small errors in the
  side checker.
 *---------------------------------------------------------------------------*/
 
 int DoLinesIntersect(void)
 {
-	short int x,y,val = 0;
+	double x,y;
+	short int val = 0;
 
-	long dx2,dy2,dx3,dy3,a,b,l;
+	double dx2,dy2,dx3,dy3,a,b,l;
 
 	dx2 = psx - lsx;									/* Checking line -> partition*/
 	dy2 = psy - lsy;
@@ -344,7 +345,7 @@ int DoLinesIntersect(void)
 
 	a = pdy*dx2 - pdx*dy2;
 	b = pdy*dx3 - pdx*dy3;
-	if ( (a ^ b) < 0 && a && b)								/* Line is split, just check that*/
+	if (a != 0 && b != 0 && a != b)								/* Line is split, just check that*/
 		{
 		ComputeIntersection(&x,&y);
 		dx2 = lsx - x;									/* Find distance from line start*/
@@ -352,7 +353,7 @@ int DoLinesIntersect(void)
 		if(dx2 == 0 && dy2 == 0) a = 0;
 		else
 			{
-			l = (long) dx2*dx2+(long) dy2*dy2;		                        /* If either ends of the split*/
+			l = dx2*dx2+dy2*dy2;				/* If either ends of the split*/
 			if (l < 4) a = 0;							/* are smaller than 2 pixs then*/
 			}												/* assume this starts on part line*/
 		dx3 = lex - x;									/* Find distance from line end*/
@@ -360,7 +361,7 @@ int DoLinesIntersect(void)
 		if(dx3 == 0 && dy3 == 0) b = 0;
 		else
 			{
-			l = (long) dx3*dx3 + (long) dy3*dy3;					/* same as start of line*/
+			l = dx3*dx3 + dy3*dy3;					/* same as start of line*/
 			if (l < 4) b = 0;
 			}
 		}

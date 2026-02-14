@@ -279,6 +279,7 @@ void add_substream(const char *name, void *data, size_t length)
 {
   if(!frac) return;
   add_lump_entry(name, data, length, 1);
+  Verbose("Substream of %d bytes referred to internally as \"%s\" added\n", length, name);
 }
 
 static struct directory * write_lump(struct lumplist *lump)
@@ -287,8 +288,8 @@ static struct directory * write_lump(struct lumplist *lump)
  if ((lump->dir->start = ftell(outfile)) == -1 || (lump->dir->length &&
    fwrite(lump->data, 1, lump->dir->length, outfile) != lump->dir->length))
    ProgError("Failure writing %-.8s\n", lump->dir->name);
- if (lump->substream) return NULL;
  if (lump->data) { free(lump->data); lump->data = NULL; }
+ if (lump->substream) return NULL;
 
  /* This dir entry is to be written to file, so swap back to little endian */
  swaplong(&(lump->dir->start));

@@ -31,8 +31,10 @@
 
 /*- Global Vars ------------------------------------------------------------*/
 
-struct Vertex  *vertices;
+struct Vertex  *vertices, *frac;
+struct RealVert *realvert;
 long            num_verts = 0;
+
 
 struct LineDef *linedefs;
 long            num_lines = 0;
@@ -56,8 +58,8 @@ long            num_nodes = 0;
 
 unsigned char  *SectorHits;
 
-long            psx, psy, pex, pey, pdx, pdy;
-long            lsx, lsy, lex, ley;
+double          psx, psy, pex, pey, pdx, pdy;
+double          lsx, lsy, lex, ley;
 
 /*- Prototypes -------------------------------------------------------------*/
 
@@ -65,6 +67,9 @@ static void     GetVertexes(void);
 static void     GetLinedefs(void);
 static void     GetSidedefs(void);
 static void     GetSectors(void);
+
+static void     FixedToReal(void);
+static void     RealToFixed(void);
 
 static struct Seg *CreateSegs(void);
 
@@ -75,30 +80,30 @@ static struct Seg *CreateSegs(void);
 
 void FindLimits(struct Seg * ts, bbox_t box)
 {
-	int             minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN,
+	double          minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN,
 	                maxy = INT_MIN;
 	int             fv, tv;
 
 	for (;;) {
 		fv = ts->start;
 		tv = ts->end;
-		/* printf("%d : %d,%d\n",n,vertices[n].x,vertices[n].y); */
-		if (vertices[fv].x < minx)
-			minx = vertices[fv].x;
-		if (vertices[fv].x > maxx)
-			maxx = vertices[fv].x;
-		if (vertices[fv].y < miny)
-			miny = vertices[fv].y;
-		if (vertices[fv].y > maxy)
-			maxy = vertices[fv].y;
-		if (vertices[tv].x < minx)
-			minx = vertices[tv].x;
-		if (vertices[tv].x > maxx)
-			maxx = vertices[tv].x;
-		if (vertices[tv].y < miny)
-			miny = vertices[tv].y;
-		if (vertices[tv].y > maxy)
-			maxy = vertices[tv].y;
+		/* printf("%d : %g,%g\n",n,realvert[n].x,realvert[n].y); */
+		if (realvert[fv].x < minx)
+			minx = realvert[fv].x;
+		if (realvert[fv].x > maxx)
+			maxx = realvert[fv].x;
+		if (realvert[fv].y < miny)
+			miny = realvert[fv].y;
+		if (realvert[fv].y > maxy)
+			maxy = realvert[fv].y;
+		if (realvert[tv].x < minx)
+			minx = realvert[tv].x;
+		if (realvert[tv].x > maxx)
+			maxx = realvert[tv].x;
+		if (realvert[tv].y < miny)
+			miny = realvert[tv].y;
+		if (realvert[tv].y > maxy)
+			maxy = realvert[tv].y;
 		if (ts->next == NULL)
 			break;
 		ts = ts->next;
@@ -119,13 +124,12 @@ add_seg(struct Seg * cs, int n, int fv, int tv,
 	cs->next = NULL;
 	cs->start = fv;
 	cs->end = tv;
-	cs->pdx = (long) (cs->pex = vertices[tv].x)
-		- (cs->psx = vertices[fv].x);
-	cs->pdy = (long) (cs->pey = vertices[tv].y)
-		- (cs->psy = vertices[fv].y);
+	cs->pdx = (cs->pex = realvert[tv].x)
+		- (cs->psx = realvert[fv].x);
+	cs->pdy = (cs->pey = realvert[tv].y)
+		- (cs->psy = realvert[fv].y);
 	cs->ptmp = cs->pdx * cs->psy - cs->psx * cs->pdy;
-	cs->len = (long) sqrt((double) cs->pdx * cs->pdx +
-			      (double) cs->pdy * cs->pdy);
+	cs->len = sqrt( cs->pdx * cs->pdx + cs->pdy * cs->pdy);
 
 	if ((cs->sector = sd->sector) == -1)
 		fprintf(stderr, "\nWarning: Bad sidedef in linedef %d (Z_CheckHeap error)\n", n);
@@ -154,7 +158,7 @@ static struct Seg* CreateSegs(void)
 	for (n = 0; n < num_lines; n++, l++) {	/* step through linedefs and
 		 * get side *//* numbers */
                 /* If line is 0 length, don't generate any segs */
-                if (!memcmp(&vertices[l->start],&vertices[l->end],sizeof *vertices))
+                if (!memcmp(&realvert[l->start],&realvert[l->end],sizeof *realvert))
                   continue;
 		if (l->sidedef1 != -1)
 			(cs = add_seg(cs, n, l->start, l->end, &fs, sidedefs + l->sidedef1))->flip = 0;
@@ -222,7 +226,7 @@ GetVertexes(void)
 		Verbose(", but %ld were unused\n(this is normal if the nodes were built before).\n",
 		       num_verts - used_verts);
 	else
-		Verbose(".");
+		Verbose(".\n");
 	num_verts = used_verts;
 	if (!num_verts)
 		ProgError("Couldn't find any used Vertices");
@@ -334,9 +338,10 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 	GetSidedefs();
 	GetSectors();
 
-        ConvertVertex();
-        ConvertSidedef();
-        ConvertSector();
+	ConvertVertex();
+	FixedToReal();
+	ConvertSidedef();
+	ConvertSector();
 
 	tsegs = CreateSegs();	/* Initially create segs */
 
@@ -357,14 +362,14 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 	Verbose("Heights of left and right subtrees = (%u,%u)\n",
 	       height(nodelist->nextl), height(nodelist->nextr));
 
+	RealToFixed();
 	vertlmp->dir->length = num_verts * sizeof(struct Vertex);
 	vertlmp->data = vertices;
+	add_substream("VERTSUBS", frac, sizeof(struct Vertex) * num_verts);
 
 	add_lump("SEGS", psegs, sizeof(struct Pseg) * num_psegs);
 
 	add_lump("SSECTORS", ssectors, sizeof(struct SSector) * num_ssectors);
-
-	add_substream("VERTSUBS", vertlmp->data, vertlmp->dir->length);
 
 	if (!FindDir("REJECT")) {
 		long            reject_size = (num_sects * num_sects + 7) / 8;
@@ -384,5 +389,39 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 
 	ConvertAll();		/* Switch back to file endianness */
 }				/* if (lump->islevel) */
+
+static void FixedToReal(void)
+{
+	int i = 0;
+	if(realvert) free(realvert);
+	realvert = GetMemory(sizeof(struct RealVert) * num_verts);
+
+	for(i = 0 ; i < num_verts ; i ++)
+	{
+		realvert[i].x = vertices[i].x;
+		realvert[i].y = vertices[i].y;
+	}
+}
+
+static void RealToFixed(void)
+{
+	int i = 0;
+	free(vertices);
+	vertices = GetMemory(sizeof(struct Vertex) * num_verts);
+	frac = GetMemory(sizeof(struct Vertex) * num_verts);
+
+	for(i = 0 ; i < num_verts ; i ++)
+	{
+		long fx, fy;
+		fx = (long)(realvert[i].x * (((long)1)<<16));
+		fy = (long)(realvert[i].y * (((long)1)<<16));
+		vertices[i].x = (short int)(0xffff & (fx >> 16));
+		frac[i].x = (short int)(0xffff & fx);
+		vertices[i].y = (short int)(0xffff & (fy >> 16));
+		frac[i].y = (short int)(0xffff & fy);
+	}
+	free(realvert);
+	realvert = NULL;
+}
 
 /*- end of file ------------------------------------------------------------*/

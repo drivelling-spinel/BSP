@@ -51,6 +51,12 @@ struct Vertex
    int16_t y;         /* Y coordinate */
 } __attribute__((packed));
 
+struct RealVert
+{
+   double x;
+   double y;
+};
+
 struct LineDef
 {
    uint16_t start;     /* from this vertex ... */

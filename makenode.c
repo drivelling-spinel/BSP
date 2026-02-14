@@ -4,7 +4,7 @@
 #include "structs.h"
 #include "bsp.h"
 
-signed short node_x, node_y, node_dx, node_dy;
+double node_x, node_y, node_dx, node_dy;
 
 /*--------------------------------------------------------------------------*/
 
@@ -14,8 +14,8 @@ int SplitDist(struct Seg *ts)
 
 	if(ts->flip==0)
 		{
-		dx = (double)(vertices[linedefs[ts->linedef].start].x)-(vertices[ts->start].x);
-		dy = (double)(vertices[linedefs[ts->linedef].start].y)-(vertices[ts->start].y);
+		dx = realvert[linedefs[ts->linedef].start].x-realvert[ts->start].x;
+		dy = realvert[linedefs[ts->linedef].start].y-realvert[ts->start].y;
 
 		if(dx == 0 && dy == 0) 
 			fprintf(stderr,"Trouble in SplitDist %f,%f\n",dx,dy);
@@ -24,8 +24,8 @@ int SplitDist(struct Seg *ts)
 		}
 	else
 		{
-		dx = (double)(vertices[linedefs[ts->linedef].end].x)-(vertices[ts->start].x);
-		dy = (double)(vertices[linedefs[ts->linedef].end].y)-(vertices[ts->start].y);
+		dx = realvert[linedefs[ts->linedef].end].x-realvert[ts->start].x;
+		dy = realvert[linedefs[ts->linedef].end].y-realvert[ts->start].y;
 
 		if(dx == 0 && dy == 0) 
 			fprintf(stderr,"Trouble in SplitDist %f,%f\n",dx,dy);
@@ -53,20 +53,21 @@ DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_t bbox)
 	struct Seg *rights,*lefts;
 	struct Seg *tmps,*best,*news,*prev;
 	struct Seg *add_to_rs,*add_to_ls;
-  	struct Seg *new_best=NULL,*new_rs,*new_ls;
+	struct Seg *new_best=NULL,*new_rs,*new_ls;
 
 	struct Seg *strights,*stlefts;
-        int num_new=0;
-	short int x,y,val;
+	int num_new=0;
+	double x,y;
+	int val;
 
 	best = PickNode(ts,bbox);			/* Pick best node to use.*/
 
 	if(best == NULL) ProgError("Couldn't pick nodeline!");
 
-	node_x = vertices[best->start].x;
-	node_y = vertices[best->start].y;
-	node_dx = vertices[best->end].x-vertices[best->start].x;
-	node_dy = vertices[best->end].y-vertices[best->start].y;
+	node_x = realvert[best->start].x;
+	node_y = realvert[best->start].y;
+	node_dx = realvert[best->end].x-realvert[best->start].x;
+	node_dy = realvert[best->end].y-realvert[best->start].y;
 
 /* When we get to here, best is a pointer to the partition seg.
 	Using this partition line, we must split any lines that are intersected
@@ -79,10 +80,10 @@ DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_t bbox)
 	strights = NULL;								/* Start off with empty*/
 	stlefts = NULL;								/* lists.*/
 
-	psx = vertices[best->start].x;			/* Partition line coords*/
-	psy = vertices[best->start].y;
-	pex = vertices[best->end].x;
-	pey = vertices[best->end].y;
+	psx = realvert[best->start].x;			/* Partition line coords*/
+	psy = realvert[best->start].y;
+	pex = realvert[best->end].x;
+	pey = realvert[best->end].y;
 	pdx = psx - pex;								/* Partition line DX,DY*/
 	pdy = psy - pey;
 
@@ -93,18 +94,18 @@ DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_t bbox)
 		add_to_ls = NULL;
 		if(tmps != best)
 			{
-			lsx = vertices[tmps->start].x;	/* Calculate this here, cos it doesn't*/
-			lsy = vertices[tmps->start].y;	/* change for all the interations of*/
-			lex = vertices[tmps->end].x;		/* the inner loop!*/
-			ley = vertices[tmps->end].y;
+			lsx = realvert[tmps->start].x;	/* Calculate this here, cos it doesn't*/
+			lsy = realvert[tmps->start].y;	/* change for all the interations of*/
+			lex = realvert[tmps->end].x;		/* the inner loop!*/
+			ley = realvert[tmps->end].y;
 			val = DoLinesIntersect();
 			if((val&2 && val&64) || (val&4 && val&32))	/* If intersecting !!*/
 				{
 				ComputeIntersection(&x,&y);
-/*				printf("Splitting Linedef %d at %d,%d\n",tmps->linedef,x,y);*/
- 			        vertices = ResizeMemory(vertices, sizeof(struct Vertex) * (num_verts+1));
-				vertices[num_verts].x = x;
-				vertices[num_verts].y = y;
+/*				printf("Splitting Linedef %d at %g,%g\n",tmps->linedef,x,y);*/
+				realvert = ResizeMemory(realvert, sizeof(struct RealVert) * (num_verts+1));
+				realvert[num_verts].x = x;
+				realvert[num_verts].y = y;
 
 				news = GetMemory(sizeof( struct Seg));
 				*news = *tmps;
@@ -150,15 +151,15 @@ DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_t bbox)
    the assumption that if two segs are parallel, they came
    from the same linedef. This is clearly not always true.   */
 
-              /*  if (tmps->flip != best->flip)   old logic -- wrong!!! */
+/*  if (tmps->flip != best->flip)   old logic -- wrong!!! */
 
-              /* We know the segs are parallel or nearly so, so take their
-                 dot product to determine their relative orientation. */
+/* We know the segs are parallel or nearly so, so take their
+   dot product to determine their relative orientation. */
 
-		if ( (lsx-lex)*pdx + (lsy-ley)*pdy < 0)
-  	         add_to_ls = tmps;
-	 	else
-		 add_to_rs = tmps;
+					if ( (lsx-lex)*pdx + (lsy-ley)*pdy < 0)
+						add_to_ls = tmps;
+					else
+						add_to_rs = tmps;
 					}
 				}
 			}
@@ -269,20 +270,20 @@ static inline int IsItConvex( struct Seg *ts)
 
 	for(line=ts;line;line=line->next)
 		{
-		psx = vertices[line->start].x;
-		psy = vertices[line->start].y;
-		pex = vertices[line->end].x;
-		pey = vertices[line->end].y;
+		psx = realvert[line->start].x;
+		psy = realvert[line->start].y;
+		pex = realvert[line->end].x;
+		pey = realvert[line->end].y;
 		pdx = (psx - pex);									/* Partition line DX,DY*/
 		pdy = (psy - pey);
 		for(check=ts;check;check=check->next)
 			{
 			if(line!=check)
 				{
-				lsx = vertices[check->start].x;	/* Calculate this here, cos it doesn't*/
-				lsy = vertices[check->start].y;	/* change for all the interations of*/
-				lex = vertices[check->end].x;		/* the inner loop!*/
-				ley = vertices[check->end].y;
+				lsx = realvert[check->start].x;	/* Calculate this here, cos it doesn't*/
+				lsy = realvert[check->start].y;	/* change for all the interations of*/
+				lex = realvert[check->end].x;		/* the inner loop!*/
+				ley = realvert[check->end].y;
 				val = DoLinesIntersect();
 				if(val&34) return TRUE;
 				}

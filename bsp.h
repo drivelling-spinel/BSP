@@ -80,6 +80,7 @@ void* ResizeMemory(void *, size_t) __attribute__((warn_unused_result));
 void DoLevel(const char *current_level_name, struct lumplist * current_level);
 
 extern struct Vertex *vertices;
+extern struct RealVert *realvert;
 extern long num_verts;
 
 extern struct LineDef *linedefs;
@@ -101,8 +102,8 @@ extern long num_nodes;
 
 extern unsigned char *SectorHits;
 
-extern long psx,psy,pex,pey,pdx,pdy;
-extern long lsx,lsy,lex,ley;
+extern double psx,psy,pex,pey,pdx,pdy;
+extern double lsx,lsy,lex,ley;
 
 /* makenode.c */
 struct Node *CreateNode(struct Seg *, const bbox_t bbox);
@@ -115,7 +116,7 @@ struct Seg *PickNode_traditional(struct Seg *, const bbox_t bbox);
 struct Seg *PickNode_visplane(struct Seg *, const bbox_t bbox);
 extern struct Seg *(*PickNode)(struct Seg *, const bbox_t bbox);
 int DoLinesIntersect(void);
-void ComputeIntersection(short int *outx,short int *outy);
+void ComputeIntersection(double *outx, double *outy);
 
 /* malloc edbugging with dmalloc */
 #ifdef WITH_DMALLOC
