@@ -23,7 +23,7 @@
 #undef WORDS_BIGENDIAN
 
 /* Define if you have the isatty function.  */
-#undef HAVE_ISATTY
+#define HAVE_ISATTY
 
 /* Define if you have the tmpfile function.  */
 #define HAVE_TMPFILE
@@ -32,13 +32,13 @@
 #define HAVE_UNLINK
 
 /* Define if you have the <unistd.h> header file.  */
-#undef HAVE_UNISTD_H
+#define HAVE_UNISTD_H
 
 /* Define if you have the <io.h> header file.  */
 #define HAVE_IO_H
 
 /* Define if you have the m library (-lm).  */
-#undef HAVE_LIBM
+#define HAVE_LIBM
 
 /* Name of package */
 #define PACKAGE "bsp"

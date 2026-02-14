@@ -30,6 +30,7 @@ struct lumplist {
  struct lumplist *next;
  struct directory *dir;
  void *data;
+ uint8_t substream;
  struct lumplist *level;
 };
 

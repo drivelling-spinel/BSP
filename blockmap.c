@@ -146,6 +146,15 @@ CreateBlockmap_old(const bbox_t bbox)
 	Verbose("done.\n");
 }
 
+/*
+*/
+
+void 
+CreateBlockmap_dummy(const bbox_t bbox)
+{
+	Verbose("Skipping blockmap creation.\n");
+}
+
 /*- Create blockmap (compressed) ----------------------------------------
  * Contributed by Simon "fraggle" Howard <sdh300@ecs.soton.ac.uk> 
  * Merged 2001/11/17 */

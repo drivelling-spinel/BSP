@@ -51,6 +51,10 @@ struct Seg *(*PickNode)(struct Seg *, const bbox_t bbox)=PickNode_traditional;
 static int visplane;
 static int noreject;
 
+static int noblockmap;
+
+static int frac;
+
 static unsigned char pcnt;
 
 static struct lumplist *lumplist,*current_level;
@@ -141,6 +145,7 @@ static int OpenWadFile(char *filename)
    l->data=NULL;
    l->next=NULL;
    l->level=NULL;
+   l->substream=0;
 
    if ((dir->name[0]=='E' && dir->name[2]=='M' &&
         dir->name[1]>='1' && dir->name[1]<='9' &&
@@ -162,7 +167,7 @@ static int OpenWadFile(char *filename)
      if (!strncmp(dir->name,"SEGS",8) ||
 	 !strncmp(dir->name,"SSECTORS",8) ||
 	 !strncmp(dir->name,"NODES",8) ||
-	 !strncmp(dir->name,"BLOCKMAP",8) ||
+	 (!noblockmap && !strncmp(dir->name,"BLOCKMAP",8)) ||
 	 !strncmp(dir->name, "BEHAVIOR", 8) ||
 	 !strncmp(dir->name, "SCRIPTS", 8) ||
 	 (!noreject && !strncmp(dir->name,"REJECT",8)))
@@ -242,7 +247,7 @@ void* ReadLump(struct lumplist *l)
 /* Add a lump to current level
    by Lee Killough */
 
-void add_lump(const char *name, void *data, size_t length)
+static void add_lump_entry(const char *name, void *data, size_t length, uint8_t substream)
 {
  struct lumplist *l;
  for (l=current_level;l;l=l->next)
@@ -262,27 +267,40 @@ void add_lump(const char *name, void *data, size_t length)
  l->dir->length=length;
  l->level=NULL;
  l->data=data;
+ l->substream=substream;
 }
 
-static struct directory write_lump(struct lumplist *lump)
+void add_lump(const char *name, void *data, size_t length)
+{
+  add_lump_entry(name, data, length, 0);
+}
+
+void add_substream(const char *name, void *data, size_t length)
+{
+  if(!frac) return;
+  add_lump_entry(name, data, length, 1);
+}
+
+static struct directory * write_lump(struct lumplist *lump)
 {
  ReadLump(lump); /* cph - fetch into memory if not there already */
  if ((lump->dir->start = ftell(outfile)) == -1 || (lump->dir->length &&
    fwrite(lump->data, 1, lump->dir->length, outfile) != lump->dir->length))
    ProgError("Failure writing %-.8s\n", lump->dir->name);
+ if (lump->substream) return NULL;
  if (lump->data) { free(lump->data); lump->data = NULL; }
 
  /* This dir entry is to be written to file, so swap back to little endian */
  swaplong(&(lump->dir->start));
  swaplong(&(lump->dir->length));
 
- return *lump->dir;
+ return lump->dir;
 }
 
 static void sortlump(struct lumplist **link)
 {
- static const char *const lumps[10]={"THINGS", "LINEDEFS", "SIDEDEFS",
-  "VERTEXES", "SEGS", "SSECTORS", "NODES", "SECTORS", "REJECT", "BLOCKMAP"};
+ static const char *const lumps[11]={"THINGS", "LINEDEFS", "SIDEDEFS",
+  "VERTEXES", "VERTSUBS", "SEGS", "SSECTORS", "NODES", "SECTORS", "REJECT", "BLOCKMAP"};
  int i=sizeof(lumps)/sizeof(*lumps)-1;
  struct lumplist **l;
  do
@@ -316,6 +334,8 @@ void usage(const char* path)
         "                 Selects either the old straightforward blockmap\n"
         "                 generation, or the new compressed blockmap code\n"
         "  -noreject      Does not clobber reject map\n"
+        "  -noblockmap    Leaves existing blockmap alone\n"
+        "  -frac          Enables saving fraction part of verterx coordinates\n"
 	"  -q             Quiet mode (only errors are printed)\n"
        );
  exit(1);
@@ -339,6 +359,7 @@ void (*CreateBlockmap)(const bbox_t bbox) = CreateBlockmap_old;
 const struct multi_option blockmap_options[] = {
 {"old", "BSP v3.0 blockmap algorithm",CreateBlockmap_old},
 {"comp", "Compressed blockmap", CreateBlockmap_compressed},
+{"dummy", "Skip creating blockmap", CreateBlockmap_dummy},
 {NULL,NULL,NULL},
 };
 
@@ -353,9 +374,11 @@ static void parse_options(int argc, char *argv[])
  } tab[]= { {"-picknode", &PickNode, MULTI, picknode_options},
             {"-blockmap", &CreateBlockmap, MULTI, blockmap_options},
             {"-noreject", &noreject, NONE},
+            {"-noblockmap", &noblockmap, NONE},
             {"-q", &quiet, NONE},
             {"-factor", &factor, INT},
             {"-o", fnames+1, STRING},
+            {"-frac", &frac, NONE},
           };
  int nf=0;
 
@@ -418,6 +441,8 @@ static void parse_options(int argc, char *argv[])
    usage(argv[0]);
 
  outwad = fnames[1] ? fnames[1] : "tmp.wad";   /* Get output name*/
+
+ if (noblockmap) CreateBlockmap = CreateBlockmap_dummy;
 }
 
 /*- Main Program -----------------------------------------------------------*/
@@ -489,7 +514,7 @@ int main(int argc,char *argv[])
  fwrite("xxxxxxxxxxxx",sizeof wad,1,outfile);
 
  for (lump=lumplist; lump; lump=lump->next) {
-  newdirec[wad.num_entries++]=write_lump(lump);
+  newdirec[wad.num_entries++]=*write_lump(lump);
   if (lump->level)
     {
      char current_level_name[9];
@@ -499,7 +524,10 @@ int main(int argc,char *argv[])
      DoLevel(current_level_name, current_level = lump->level);
      sortlump(&lump->level);
      for (l=lump->level; l; l=l->next)
-       newdirec[wad.num_entries++]=write_lump(l);
+       {
+        struct directory * d = write_lump(l);
+        if(d) newdirec[wad.num_entries++] = *d;
+       }
    }  /* if (lump->level) */
  }
 

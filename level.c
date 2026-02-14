@@ -364,6 +364,8 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 
 	add_lump("SSECTORS", ssectors, sizeof(struct SSector) * num_ssectors);
 
+	add_substream("VERTSUBS", vertlmp->data, vertlmp->dir->length);
+
 	if (!FindDir("REJECT")) {
 		long            reject_size = (num_sects * num_sects + 7) / 8;
 		void           *data = GetMemory(reject_size);

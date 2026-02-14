@@ -40,6 +40,7 @@
 /* blockmap.c */
 void CreateBlockmap_old(const bbox_t bbox);
 void CreateBlockmap_compressed(const bbox_t bbox);
+void CreateBlockmap_dummy(const bbox_t bbox);
 extern void (*CreateBlockmap)(const bbox_t bbox);
 
 /* bsp.c */
@@ -52,6 +53,8 @@ extern const char *unlinkwad;
 struct lumplist *FindDir(const char *);
 void* ReadLump(struct lumplist *l);
 void add_lump(const char *name, void *data, size_t length);
+
+void add_substream(const char *name, void *data, size_t length);
 
 /* endian.c */
 
