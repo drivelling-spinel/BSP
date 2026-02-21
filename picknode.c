@@ -46,7 +46,7 @@ struct Seg *PickNode_traditional(struct Seg *ts, const bbox_real_t bbox)
      double a = part->pdy * check->psx - part->pdx * check->psy + part->ptmp;
      double b = part->pdy * check->pex - part->pdx * check->pey + part->ptmp;
      if (signbit(a) != signbit(b))
-       if (a !=0 && b != 0)
+       if (!NEAR_ZERO(a) && !NEAR_ZERO(b))
         {                    /* Line is split; a,b nonzero, opposite sign */
          double l=check->len;
          double d=(l*a)/(a-b); /* Distance from start of intersection */
@@ -74,7 +74,7 @@ struct Seg *PickNode_traditional(struct Seg *ts, const bbox_real_t bbox)
        else
          goto leftside;
      else
-       if (a<=0 && (a || (!b && check->pdx*part->pdx+check->pdy*part->pdy<0)))
+       if (a<=0 && (!NEAR_ZERO(a) || (NEAR_ZERO(b) && check->pdx*part->pdx+check->pdy*part->pdy<0)))
         {
          leftside:
            diff-=2;
@@ -136,7 +136,8 @@ struct Seg *PickNode_visplane(struct Seg *ts, const bbox_real_t bbox)
  for (part=ts;part;part=part->next)	/* Use each Seg as partition*/
   {
    struct Seg *check;
-   long cost=0,slen=0;
+   double slen=0; 
+   long cost=0;
    int tot=0,diff=cnt;
    memset(SectorHits,0,num_sects);
    progress();           	        /* Something for the user to look at.*/
@@ -149,7 +150,7 @@ struct Seg *PickNode_visplane(struct Seg *ts, const bbox_real_t bbox)
      unsigned char mask=2;
 
      if (signbit(a) != signbit(b))
-       if (a != 0 && b != 0)
+       if (!NEAR_ZERO(a) && !NEAR_ZERO(b))
         {                /* Line is split; a,b nonzero, opposite sign */
          double l=check->len;
          double d=(l*a)/(a-b);    /* Distance from start of intersection */
@@ -178,7 +179,7 @@ struct Seg *PickNode_visplane(struct Seg *ts, const bbox_real_t bbox)
        else
          goto leftside;
      else
-       if (a<=0 && (a || (!b && (slen+=check->len,
+       if (a<=0 && (!NEAR_ZERO(a) || (NEAR_ZERO(b) && (slen+=check->len,
                      check->pdx*part->pdx+check->pdy*part->pdy<0))))
         {
          leftside:
@@ -227,10 +228,10 @@ struct Seg *PickNode_visplane(struct Seg *ts, const bbox_real_t bbox)
 
       {
        double l;
-       if (part->pdx == 0)
+       if (NEAR_ZERO(part->pdx))
          l=bbox[BB_TOP]-bbox[BB_BOTTOM];
        else
-         if (part->pdy == 0)
+         if (NEAR_ZERO(part->pdy))
            l=bbox[BB_RIGHT]-bbox[BB_LEFT];
          else
           {
@@ -282,9 +283,9 @@ void ComputeIntersection(double *outx,double *outy)
 	dx2 = lex - lsx;
 	dy2 = ley - lsy;
 
-	if (dx == 0 && dy == 0) ProgError("Trouble in ComputeIntersection dx,dy");
+	if (NEAR_ZERO(dx) && NEAR_ZERO(dy)) ProgError("Trouble in ComputeIntersection dx,dy");
 /*	l = sqrt((dx*dx) + (dy*dy));  unnecessary - killough */
-	if(dx2 == 0 && dy2 == 0) ProgError("Trouble in ComputeIntersection dx2,dy2");
+	if(NEAR_ZERO(dx2) && NEAR_ZERO(dy2)) ProgError("Trouble in ComputeIntersection dx2,dy2");
 	l2 = sqrt((dx2*dx2) + (dy2*dy2));
 
 	a = dx /* / l */;  /* no normalization of a,b necessary,   */
@@ -292,11 +293,11 @@ void ComputeIntersection(double *outx,double *outy)
 	a2 = dx2 / l2;     /* cancels it out. */
 	b2 = dy2 / l2;
 	d = b * a2 - a * b2;
-	if (d)
+	if (!NEAR_ZERO(d))
 		{
 		w = ((a*(lsy-psy))+(b*(psx-lsx))) / d;
 
-/*		printf("Intersection at (%f,%f)\n",x2+(a2*w),y2+(b2*w));*/
+/*		printf("Intersection at (%f,%f)"CRLF,x2+(a2*w),y2+(b2*w));*/
 
 		a = lsx+(a2*w);
 		b = lsy+(b2*w);
@@ -345,12 +346,12 @@ int DoLinesIntersect(void)
 
 	a = pdy*dx2 - pdx*dy2;
 	b = pdy*dx3 - pdx*dy3;
-	if (a != 0 && b != 0 && signbit(a) != signbit(b))								/* Line is split, just check that*/
+	if (!NEAR_ZERO(a) && !NEAR_ZERO(b) && signbit(a) != signbit(b))								/* Line is split, just check that*/
 		{
 		ComputeIntersection(&x,&y);
 		dx2 = lsx - x;									/* Find distance from line start*/
 		dy2 = lsy - y;									/* to split point*/
-		if(dx2 == 0 && dy2 == 0) a = 0;
+		if(NEAR_ZERO(dx2) && NEAR_ZERO(dy2)) a = 0;
 		else
 			{
 			l = dx2*dx2+dy2*dy2;				/* If either ends of the split*/
@@ -358,7 +359,7 @@ int DoLinesIntersect(void)
 			}												/* assume this starts on part line*/
 		dx3 = lex - x;									/* Find distance from line end*/
 		dy3 = ley - y;									/* to split point*/
-		if(dx3 == 0 && dy3 == 0) b = 0;
+		if(NEAR_ZERO(dx3) && NEAR_ZERO(dy3)) b = 0;
 		else
 			{
 			l = dx3*dx3 + dy3*dy3;					/* same as start of line*/
@@ -366,13 +367,13 @@ int DoLinesIntersect(void)
 			}
 		}
 
-	if(a == 0) val = val | 16;								/* start is on middle*/
+	if(NEAR_ZERO(a)) val = val | 16;								/* start is on middle*/
          else
 	if(a < 0) val = val | 32;						/* start is on left side*/
         else
 	/* if(a > 0) */ val = val | 64;						/* start is on right side*/
 
-	if (b == 0) val = val | 1;						/* end is on middle*/
+	if (NEAR_ZERO(b)) val = val | 1;						/* end is on middle*/
         else
 	if(b < 0) val = val | 2;						/* end is on left side*/
         else

@@ -34,6 +34,10 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#ifdef HAVE_CONIO_H
+#include <conio.h>
+#endif
+
 #ifndef O_BINARY
 # define O_BINARY 0
 #endif
@@ -81,7 +85,15 @@ static void fcopy(FILE* in, FILE* out)
 void progress(void)
 {
 	if((verbosity > 1) && !((++pcnt)&31))
+	{
+#ifdef HAVE_CONIO_H
+		textcolor(GREEN);
+#endif
 		Verbose("%c\b","/-\\|"[((pcnt)>>5)&3]);
+#ifdef HAVE_CONIO_H
+		textcolor(LIGHTGRAY);
+#endif
+	}
 }
 
 /*- get the directory from a wad file --------------------------------------*/
@@ -107,7 +119,7 @@ static int OpenWadFile(char *filename)
      perror("tmpfile"); 
      ProgError("Input was not seekable and failed to create temp file");
    }
-   Verbose("Copying piped input to temporary file\n");
+   Verbose("Copying piped input to temporary file"CRLF);
    fcopy(infile,intmp);
    fclose(infile);
    rewind(infile = intmp);
@@ -122,7 +134,7 @@ static int OpenWadFile(char *filename)
   swaplong(&wad.num_entries);
   swaplong(&wad.dir_start);
 
-  Verbose("Opened %cWAD file: %s. %" PRIu32 " dir entries at 0x%08" PRIx32 ".\n",
+  Verbose("Opened %cWAD file: %s. %" PRIu32 " dir entries at 0x%08" PRIx32 "."CRLF,
 	wad.type[0],filename,wad.num_entries,wad.dir_start);
 
  direc = GetMemory(sizeof(struct directory) * wad.num_entries);
@@ -175,7 +187,7 @@ static int OpenWadFile(char *filename)
 
      if (FindDir(dir->name))
       {
-       Verbose("Warning: Duplicate entry \"%-8.8s\" ignored in %-.8s\n",
+       Verbose("Warning: Duplicate entry \"%-8.8s\" ignored in %-.8s"CRLF,
          dir->name, current_level->dir->name);
        continue;
       }
@@ -238,7 +250,7 @@ void* ReadLump(struct lumplist *l)
     l->data=GetMemory(dir->length);
     if (fseek(infile,dir->start,0) ||
         fread(l->data,1,dir->length,infile) != dir->length)
-         ProgError("Unable to read wad directory entry \"%-8.8s\" in %-.8s\n",
+         ProgError("Unable to read wad directory entry \"%-8.8s\" in %-.8s"CRLF,
                 dir->name, current_level->dir->name);
   }
   return l->data;
@@ -279,7 +291,7 @@ void add_substream(const char *name, void *data, size_t length)
 {
   if(!frac) return;
   add_lump_entry(name, data, length, 1);
-  Verbose("Substream of %d bytes referred to internally as \"%s\" added\n", length, name);
+  Verbose("Substream of %d bytes referred to internally as \"%s\" added"CRLF, length, name);
 }
 
 static struct directory * write_lump(struct lumplist *lump)
@@ -287,7 +299,7 @@ static struct directory * write_lump(struct lumplist *lump)
  ReadLump(lump); /* cph - fetch into memory if not there already */
  if ((lump->dir->start = ftell(outfile)) == -1 || (lump->dir->length &&
    fwrite(lump->data, 1, lump->dir->length, outfile) != lump->dir->length))
-   ProgError("Failure writing %-.8s\n", lump->dir->name);
+   ProgError("Failure writing %-.8s"CRLF, lump->dir->name);
  if (lump->data) { free(lump->data); lump->data = NULL; }
  if (lump->substream) return NULL;
 
@@ -322,23 +334,30 @@ void usage(const char* path) __attribute__((noreturn));
 
 void usage(const char* path) 
 {
- printf("\nBSP v" VERSION "\n"
-        "\nSee the file AUTHORS for a complete list of credits and contributors\n"
-        "\nUsage: bsp [options] input.wad [[-o] <output.wad>]\n"
-        "       (If no output.wad is specified, tmp.wad is written)\n\n"
-        "Options:\n\n"
-        "  -factor <nnn>  Changes the cost assigned to SEG splits\n"
-        "  -picknode {traditional|visplane}\n"
-	"                 Selects either the traditional nodeline choosing algorithm\n"
-	"                 (balance the tree and minimise splits) or Lee's algorithm\n"
-	"                 to minimise visplanes (try to balance distinct sector refs)\n"
-        "  -blockmap {old|comp}\n"
-        "                 Selects either the old straightforward blockmap\n"
-        "                 generation, or the new compressed blockmap code\n"
-        "  -noreject      Does not clobber reject map\n"
-        "  -noblockmap    Leaves existing blockmap alone\n"
-        "  -frac          Enables saving fraction part of verterx coordinates\n"
-	"  -q             Quiet mode (only errors are printed)\n"
+ printf(CRLF"BSP v" VERSION );
+#ifdef HAVE_CONIO_H
+ textcolor(LIGHTMAGENTA);
+ cputs(FLAVOUR);
+ textcolor(LIGHTGRAY);
+#else
+ puts(FLAVOUR);
+#endif
+ printf(CRLF CRLF"See the file AUTHORS for a complete list of credits and contributors"CRLF
+        CRLF"Usage: bsp [options] input.wad [[-o] <output.wad>]"CRLF
+        "       (If no output.wad is specified, tmp.wad is written)"CRLF CRLF
+        "Options:"CRLF CRLF
+        "  -factor <nnn>  Changes the cost assigned to SEG splits"CRLF
+        "  -picknode {traditional|visplane}"CRLF
+	"                 Selects either the traditional nodeline choosing algorithm"CRLF
+	"                 (balance the tree and minimise splits) or Lee's algorithm"CRLF
+	"                 to minimise visplanes (try to balance distinct sector refs)"CRLF
+        "  -blockmap {old|comp}"CRLF
+        "                 Selects either the old straightforward blockmap"CRLF
+        "                 generation, or the new compressed blockmap code"CRLF
+        "  -noreject      Does not clobber reject map"CRLF
+        "  -noblockmap    Leaves existing blockmap alone"CRLF
+        "  -frac          Enables saving fraction part of verterx coordinates"CRLF
+	"  -q             Quiet mode (only errors are printed)"CRLF
        );
  exit(1);
 }
@@ -401,7 +420,7 @@ static void parse_options(int argc, char *argv[])
 		while (p->tag) {
 			if (!strcmp(p->tag,opt)) {
 				*(void**)(tab[i].var) = p->value;
-				Verbose("%s: %s\n",tab[i].option, p->text);
+				Verbose("%s: %s"CRLF,tab[i].option, p->text);
 				break;
 			}
 			p++;
@@ -474,18 +493,35 @@ int main(int argc,char *argv[])
    setbuf(stdout,NULL);
 
  if (verbosity)
-  Verbose("* Doom BSP node builder ver " VERSION "\n"
-	"Copyright (c)	1998 Colin Reed, Lee Killough\n"
-	"		2001 Simon Howard\n"
-	"		2000,2001,2002,2006 Colin Phipps <cph@moria.org.uk>\n\n");
-
+  {
+   Verbose("* ");
+#ifdef HAVE_CONIO_H
+   textcolor(RED);
+#endif
+   Verbose("Doom");
+#ifdef HAVE_CONIO_H
+   textcolor(LIGHTGRAY);
+#endif
+   Verbose(" BSP node builder ver " VERSION);
+#ifdef HAVE_CONIO_H
+   textcolor(LIGHTMAGENTA);
+#endif
+   Verbose(FLAVOUR);
+#ifdef HAVE_CONIO_H
+   textcolor(LIGHTGRAY);
+#endif
+   Verbose(CRLF
+		"Copyright (c) 1998 Colin Reed, Lee Killough"CRLF
+		"              2001 Simon Howard"CRLF
+		"              2000,2001,2002,2006 Colin Phipps <cph@moria.org.uk>"CRLF CRLF);
+  }
  levels = OpenWadFile(testwad);		/* Opens and reads directory*/
 
- Verbose("Creating nodes using tunable factor of %d\n",factor);
+ Verbose("Creating nodes using tunable factor of %d"CRLF,factor);
 
  if (visplane)
   {
-   Verbose("\nTaking special measures to reduce the chances of visplane overflow");
+   Verbose(CRLF"Taking special measures to reduce the chances of visplane overflow");
    PickNode=PickNode_visplane;
   }
 
@@ -533,6 +569,8 @@ int main(int argc,char *argv[])
    }  /* if (lump->level) */
  }
 
+ Verbose(CRLF"Saving WAD file...");
+
  if ((wad.dir_start = ftell(outfile)) == -1 ||
     fwrite(newdirec,sizeof(struct directory),wad.num_entries,outfile)!=wad.num_entries)
     ProgError("Failure writing lump directory");
@@ -553,7 +591,7 @@ int main(int argc,char *argv[])
  }
  fclose(outfile);
 
- Verbose("\nSaved WAD as %s\n",outwad);
+ Verbose(" saved as %s"CRLF,outwad);
 
  return 0;
 }

@@ -4,6 +4,10 @@
 #include "structs.h"
 #include "bsp.h"
 
+#ifdef HAVE_CONIO_H
+#include <conio.h>
+#endif
+
 double node_x, node_y, node_dx, node_dy;
 
 /*--------------------------------------------------------------------------*/
@@ -18,7 +22,7 @@ int SplitDist(struct Seg *ts)
 		dy = realvert[linedefs[ts->linedef].start].y-realvert[ts->start].y;
 
 		if(NEAR_ZERO(dx) && NEAR_ZERO(dy))
-			fprintf(stderr,"Trouble in SplitDist %f,%f\n",dx,dy);
+			fprintf(stderr,"Trouble in SplitDist %f,%f"CRLF,dx,dy);
 		t = sqrt((dx*dx) + (dy*dy));
 		return (int)t;
 		}
@@ -28,7 +32,7 @@ int SplitDist(struct Seg *ts)
 		dy = realvert[linedefs[ts->linedef].end].y-realvert[ts->start].y;
 
 		if(NEAR_ZERO(dx) && NEAR_ZERO(dy))
-			fprintf(stderr,"Trouble in SplitDist %f,%f\n",dx,dy);
+			fprintf(stderr,"Trouble in SplitDist %f,%f"CRLF,dx,dy);
 		t = sqrt((dx*dx) + (dy*dy));
 		return (int)t;
 		}
@@ -102,7 +106,7 @@ DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_real_t b
 			if((val&2 && val&64) || (val&4 && val&32))	/* If intersecting !!*/
 				{
 				ComputeIntersection(&x,&y);
-/*				printf("Splitting Linedef %d at %g,%g\n",tmps->linedef,x,y);*/
+/*				printf("Splitting Linedef %d at %g,%g"CRLF,tmps->linedef,x,y);*/
 				realvert = ResizeMemory(realvert, sizeof(struct RealVert) * (num_verts+1));
 				realvert[num_verts].x = x;
 				realvert[num_verts].y = y;
@@ -113,8 +117,8 @@ DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_real_t b
 				news->start = num_verts;
 				tmps->end = num_verts;
 				news->dist = SplitDist(news);
-/*				printf("splitting dist = %d\n",news->dist);*/
-/*				printf("splitting vertices = %d,%d,%d,%d\n",tmps->start,tmps->end,news->start,news->end);*/
+/*				printf("splitting dist = %d"CRLF,news->dist);*/
+/*				printf("splitting vertices = %d,%d,%d,%d"CRLF,tmps->start,tmps->end,news->start,news->end);*/
 				if(val&32) add_to_ls = tmps;
 				if(val&64) add_to_rs = tmps;
 				if(val&2) add_to_ls = news;
@@ -165,7 +169,7 @@ DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_real_t b
 			}
 		else add_to_rs = tmps;						/* This is the partition line*/
 
-/*		printf("Val = %X\n",val);*/
+/*		printf("Val = %X"CRLF,val);*/
 
 		if(add_to_rs)							/* CHECK IF SHOULD ADD RIGHT ONE */
 			{
@@ -198,7 +202,7 @@ DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_real_t b
 
 	if(strights == NULL)
 		{
-/*		printf("No right side, moving partition into right side\n");*/
+/*		printf("No right side, moving partition into right side"CRLF);*/
 		strights = rights = new_best;
 		prev = NULL;
 		for(tmps=stlefts;tmps;tmps=tmps->next)
@@ -215,7 +219,7 @@ DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_real_t b
 	
 	if(stlefts == NULL)
 		{
-/*		printf("No left side, moving partition into left side\n");*/
+/*		printf("No left side, moving partition into left side"CRLF);*/
 		stlefts = lefts = new_best;
 		prev = NULL;
 		for(tmps=strights;tmps;tmps=tmps->next)
@@ -240,7 +244,7 @@ DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_real_t b
 		free(tmps);
 		}
 
-/*	printf("Made %d new Vertices and Segs\n",num_new);*/
+/*	printf("Made %d new Vertices and Segs"CRLF,num_new);*/
 
 	*rs = strights ; *ls = stlefts;
 }
@@ -314,7 +318,7 @@ static inline int CreateSSector(struct Seg *tmps)
 
 	n = num_psegs;
 	
-/*	printf("\n");*/
+/*	printf(CRLF);*/
 
 	for(;tmps;tmps=next)
 		{
@@ -334,7 +338,7 @@ static inline int CreateSSector(struct Seg *tmps)
 		psegs[num_psegs].flip = tmps->flip;
 		psegs[num_psegs].dist = tmps->dist;
 /*
-		printf("%d,%d,%u,%d,%d,%u\n",
+		printf("%d,%d,%u,%d,%d,%u"CRLF,
 			psegs[num_psegs].start,
 			psegs[num_psegs].end,
 			psegs[num_psegs].angle,
@@ -387,10 +391,25 @@ struct Node *CreateNode(struct Seg *ts, const bbox_real_t bbox)
 
 	if(IsItConvex(lefts))	  								/* Check lefthand side*/
 		{
-	        if (verbosity > 1) Verbose("L");
+	        if (verbosity > 1) 
+			{
+#ifdef HAVE_CONIO_H
+				textcolor(LIGHTBLUE);
+#endif
+				Verbose("L");
+#ifdef HAVE_CONIO_H
+				textcolor(LIGHTGRAY);
+#endif
+			}
 		tn->nextl = CreateNode(lefts,tn->leftbox);	/* still segs remaining*/
 		tn->chleft = 0;
-	        if (verbosity > 1) Verbose("\b");
+	        if (verbosity > 1);
+			{
+#ifdef HAVE_CONIO_H
+				Verbose(" \b");
+#endif
+				Verbose("\b");
+			}
 		}
 	else
 		{
@@ -402,10 +421,25 @@ struct Node *CreateNode(struct Seg *ts, const bbox_real_t bbox)
 	
 	if(IsItConvex(rights))									/* Check righthand side*/
 		{
-	        if (verbosity > 1) Verbose("R");
+	        if (verbosity > 1) 
+			{
+#ifdef HAVE_CONIO_H
+				textcolor(RED);
+#endif
+				Verbose("R");
+#ifdef HAVE_CONIO_H
+				textcolor(LIGHTGRAY);
+#endif
+			}
 		tn->nextr = CreateNode(rights, tn->rightbox);	/* still segs remaining*/
 		tn->chright = 0;
-	        if (verbosity > 1) Verbose("\b");
+	        if (verbosity > 1);
+			{
+#ifdef HAVE_CONIO_H
+				Verbose(" \b");
+#endif
+				Verbose("\b");
+			}
 		}
 	else
 		{

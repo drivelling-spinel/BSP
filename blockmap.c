@@ -113,7 +113,7 @@ CreateBlockmap_old(const bbox_t bbox)
 				if (IsLineDefInside(n, (blockhead.minx + (x * 128)), (blockhead.miny + (y * 128)), (blockhead.minx + (x * 128)) + 127, (blockhead.miny + (y * 128)) + 127)) {
 					/*
 					 * printf("found line %d in block
-					 * %d\n",n,blocknum);
+					 * %d"CRLF,n,blocknum);
 					 */
 					blocklists = ResizeMemory(blocklists, ((blockoffs + 1) * 2));
 					blocklists[blockoffs] = n;
@@ -143,7 +143,7 @@ CreateBlockmap_old(const bbox_t bbox)
 		free(blocklists);
 		add_lump("BLOCKMAP", data, blockmap_size + blockptrs_size + 8);
 	}
-	Verbose("done.\n");
+	Verbose("done."CRLF);
 }
 
 /*
@@ -152,7 +152,7 @@ CreateBlockmap_old(const bbox_t bbox)
 void 
 CreateBlockmap_dummy(const bbox_t bbox)
 {
-	Verbose("Skipping blockmap creation.\n");
+	Verbose("Skipping blockmap creation."CRLF);
 }
 
 /*- Create blockmap (compressed) ----------------------------------------
@@ -375,7 +375,7 @@ CreateBlockmap_compressed(const bbox_t bbox)
 				if (IsLineDefInside(n, (blockhead.minx + (x * 128)), (blockhead.miny + (y * 128)), (blockhead.minx + (x * 128)) + 127, (blockhead.miny + (y * 128)) + 127)) {
 					/*
 					 * printf("found line %d in block
-					 * %d\n",n,blocknum);
+					 * %d"CRLF,n,blocknum);
 					 */
 
 					if(tempbl.num_lines >= num_templines-5) {
@@ -417,7 +417,7 @@ CreateBlockmap_compressed(const bbox_t bbox)
 	free(blockhash);
 	free(blockptrs);
 	
-	Verbose("done.\n");
+	Verbose("done."CRLF);
 
 	return;
 }

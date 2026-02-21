@@ -29,6 +29,10 @@
 #include "structs.h"
 #include "bsp.h"
 
+#ifdef HAVE_CONIO_H
+#include <conio.h>
+#endif
+
 /*- Global Vars ------------------------------------------------------------*/
 
 struct Vertex  *vertices, *frac;
@@ -87,7 +91,7 @@ void FindLimits(struct Seg * ts, bbox_real_t box)
 	for (;;) {
 		fv = ts->start;
 		tv = ts->end;
-		/* printf("%d : %g,%g\n",n,realvert[n].x,realvert[n].y); */
+		/* printf("%d : %g,%g"CRLF,n,realvert[n].x,realvert[n].y); */
 		if (realvert[fv].x < minx)
 			minx = realvert[fv].x;
 		if (realvert[fv].x > maxx)
@@ -134,7 +138,7 @@ add_seg(struct Seg * cs, int n, int fv, int tv,
 	cs->len = sqrt(cs->pdx * cs->pdx + cs->pdy * cs->pdy);
 
 	if ((cs->sector = sd->sector) == -1)
-		fprintf(stderr, "\nWarning: Bad sidedef in linedef %d (Z_CheckHeap error)\n", n);
+		fprintf(stderr, CRLF"Warning: Bad sidedef in linedef %d (Z_CheckHeap error)"CRLF, n);
 
 	cs->angle = ComputeAngle(cs->pdx, cs->pdy);
 
@@ -165,14 +169,14 @@ static struct Seg* CreateSegs(void)
 		if (l->sidedef1 != -1)
 			(cs = add_seg(cs, n, l->start, l->end, &fs, sidedefs + l->sidedef1))->flip = 0;
 		else
-			fprintf(stderr,"\nWarning: Linedef %d has no right sidedef\n", n);
+			fprintf(stderr,CRLF"Warning: Linedef %d has no right sidedef"CRLF, n);
 
 		if (l->sidedef2 != -1)
 			(cs = add_seg(cs, n, l->end, l->start, &fs, sidedefs + l->sidedef2))->flip = 1;
 		else if (l->flags & 4)
-			fprintf(stderr,"\nWarning: Linedef %d is 2s but has no left sidedef\n", n);
+			fprintf(stderr,CRLF"Warning: Linedef %d is 2s but has no left sidedef"CRLF, n);
 	}
-	Verbose("done.\n");
+	Verbose("done."CRLF);
 	return fs;
 }
 
@@ -204,7 +208,7 @@ GetVertexes(void)
 		int             s = linedefs[n].start;
 		int             e = linedefs[n].end;
 		if (s < 0 || s >= num_verts || e < 0 || e >= num_verts)
-			ProgError("Linedef %ld has vertex out of range\n", n);
+			ProgError("Linedef %ld has vertex out of range"CRLF, n);
 		translate[s] = translate[e] = 0;
 	}
 	used_verts = 0;
@@ -216,7 +220,7 @@ GetVertexes(void)
 		int             s = translate[linedefs[n].start];
 		int             e = translate[linedefs[n].end];
 		if (s < 0 || s >= used_verts || e < 0 || e >= used_verts)
-			ProgError("Trouble in GetVertexes: Renumbering\n");
+			ProgError("Trouble in GetVertexes: Renumbering"CRLF);
 		linedefs[n].start = s;
 		linedefs[n].end = e;
 	}
@@ -225,10 +229,10 @@ GetVertexes(void)
 
 	Verbose("Loaded %ld vertices", num_verts);
 	if (num_verts > used_verts)
-		Verbose(", but %ld were unused\n(this is normal if the nodes were built before).\n",
+		Verbose(", but %ld were unused"CRLF"(this is normal if the nodes were built before)."CRLF,
 		       num_verts - used_verts);
 	else
-		Verbose(".\n");
+		Verbose("."CRLF);
 	num_verts = used_verts;
 	if (!num_verts)
 		ProgError("Couldn't find any used Vertices");
@@ -346,7 +350,14 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 	bbox_t blockmapbound;
 	int i;
 
-	Verbose("\nBuilding nodes on %-.8s\n\n", current_level_name);
+	Verbose(CRLF"Building nodes on ");
+#ifdef HAVE_CONIO_H
+	textcolor(WHITE);
+#endif
+	Verbose("%-.8s"CRLF CRLF, current_level_name);
+#ifdef HAVE_CONIO_H
+	textcolor(LIGHTGRAY);
+#endif
 
 	num_ssectors = 0;
 	num_psegs = 0;
@@ -367,7 +378,7 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 
 	FindLimits(tsegs,mapbound);	/* Find limits of vertices */
 
-	Verbose("Map goes from (%g,%g) to (%g,%g)\n",
+	Verbose("Map goes from (%g,%g) to (%g,%g)"CRLF,
 		mapbound[BB_TOP   ],mapbound[BB_LEFT  ],
 		mapbound[BB_BOTTOM],mapbound[BB_RIGHT ]);
 
@@ -375,11 +386,20 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 
 	nodelist = CreateNode(tsegs,mapbound);	/* recursively create nodes */
 
-	Verbose("%lu NODES created, with %lu SSECTORS.\n", num_nodes, num_ssectors);
+#ifdef HAVE_CONIO_H
+	clreol();
+#endif
+	Verbose("%lu NODES created, with %lu SSECTORS."CRLF, num_nodes, num_ssectors);
 
-	Verbose("Found %lu used vertices\n", num_verts);
+#ifdef HAVE_CONIO_H
+	clreol();
+#endif
+	Verbose("Found %lu used vertices"CRLF, num_verts);
 
-	Verbose("Heights of left and right subtrees = (%u,%u)\n",
+#ifdef HAVE_CONIO_H
+	clreol();
+#endif
+	Verbose("Heights of left and right subtrees = (%u,%u)"CRLF,
 	       height(nodelist->nextl), height(nodelist->nextr));
 
 	RealToFixed();

@@ -21,7 +21,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-#define ESPILON ((double)1.0) / (((long)1)<<17);
+#define EPSILON (((double)1.0) / (((long)1)<<17))
 #define NEAR_ZERO(d) (fabs((d)) < EPSILON)
 
 /*- boolean constants ------------------------------------------------------*/

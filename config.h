@@ -40,9 +40,23 @@
 /* Define if you have the m library (-lm).  */
 #define HAVE_LIBM
 
+/* Define if you have <conio.h> header file. */
+#define HAVE_CONIO_H
+
 /* Name of package */
 #define PACKAGE "bsp"
 
 /* Version number of package */
 #define VERSION "5.1"
+
+/* Version number of package */
+#define FLAVOUR "real"
+
+/* String to use for new line */
+#define CRLF "\n"
+
+#ifdef HAVE_CONIO_H
+#undef CRLF
+#define CRLF "\r\n"
+#endif
 
