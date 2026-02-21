@@ -21,7 +21,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-#define EPSILON (((double)1.0) / (((long)1)<<17))
+#define EPSILON (((double)1.0) / (((long)1)<<16))
 #define NEAR_ZERO(d) (fabs((d)) < EPSILON)
 
 /*- boolean constants ------------------------------------------------------*/
@@ -49,7 +49,7 @@ extern void (*CreateBlockmap)(const bbox_t bbox);
 /* bsp.c */
 void progress(void);
 void FindLimits(struct Seg *, bbox_real_t box);
-int SplitDist(struct Seg *ts);
+double SplitDist(struct Seg *ts);
 
 extern const char *unlinkwad;
 

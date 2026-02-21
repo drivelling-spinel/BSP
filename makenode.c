@@ -12,7 +12,7 @@ double node_x, node_y, node_dx, node_dy;
 
 /*--------------------------------------------------------------------------*/
 
-int SplitDist(struct Seg *ts)
+double SplitDist(struct Seg *ts)
 {
 	double t,dx,dy;
 
@@ -24,7 +24,7 @@ int SplitDist(struct Seg *ts)
 		if(NEAR_ZERO(dx) && NEAR_ZERO(dy))
 			fprintf(stderr,"Trouble in SplitDist %f,%f"CRLF,dx,dy);
 		t = sqrt((dx*dx) + (dy*dy));
-		return (int)t;
+		return t;
 		}
 	else
 		{
@@ -34,7 +34,7 @@ int SplitDist(struct Seg *ts)
 		if(NEAR_ZERO(dx) && NEAR_ZERO(dy))
 			fprintf(stderr,"Trouble in SplitDist %f,%f"CRLF,dx,dy);
 		t = sqrt((dx*dx) + (dy*dy));
-		return (int)t;
+		return t;
 		}
 }
 
