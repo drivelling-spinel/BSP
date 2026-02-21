@@ -107,7 +107,7 @@ extern double lsx,lsy,lex,ley;
 
 /* makenode.c */
 struct Node *CreateNode(struct Seg *, const bbox_t bbox);
-unsigned ComputeAngle(int,int);
+unsigned ComputeAngle(double,double);
 
 /* picknode.c */
 extern int factor;

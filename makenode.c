@@ -356,10 +356,10 @@ static inline int CreateSSector(struct Seg *tmps)
 
 /*- translate (dx, dy) into an integer angle value (0-65535) ---------------*/
 
-inline unsigned int ComputeAngle(int dx, int dy) {
-   double w;
+inline unsigned int ComputeAngle(double dx, double dy) {
+	double w;
 
-	w = (atan2( (double) dy , (double) dx) * (double)(65536/(M_PI*2)));
+	w = atan2( dy , dx * (double)(65536/(M_PI*2)));
 
 	if(w<0) w = (double)65536+w;
 

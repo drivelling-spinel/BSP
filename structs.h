@@ -101,11 +101,11 @@ struct Seg
    short int linedef;   /* linedef that this seg goes along*/
    short int flip;      /* true if not the same direction as linedef */
    unsigned short dist; /* distance from starting point */
-	struct Seg *next;
-        short psx,psy,pex,pey;  /* Start, end coordinates */
-        long pdx,pdy,ptmp;      /* Used in intersection calculations */
-        long len;
-        short sector;
+   struct Seg *next;
+   double psx,psy,pex,pey;  /* Start, end coordinates */
+   double pdx,pdy,ptmp;      /* Used in intersection calculations */
+   double len;
+   short sector;
 } __attribute__((packed));
 
 struct Pseg
@@ -124,14 +124,14 @@ enum { BB_TOP, BB_BOTTOM, BB_LEFT, BB_RIGHT };
 
 struct Node
 {
-   int16_t x, y;			/* starting point*/
-   int16_t dx, dy;			/* offset to ending point*/
+   double x, y;			/* starting point*/
+   double dx, dy;			/* offset to ending point*/
    bbox_t rightbox;			/* bounding rectangle 1*/
    bbox_t leftbox;			/* bounding rectangle 2*/
    int16_t chright, chleft;		/* Node or SSector (if high bit is set)*/
-	struct Node *nextr,*nextl;
-	int16_t node_num;	        		/* starting at 0 (but reversed when done)*/
-        long ptmp;
+   struct Node *nextr,*nextl;
+   int16_t node_num;	        		/* starting at 0 (but reversed when done)*/
+//   long ptmp;
 } __attribute__((packed));
 
 struct Pnode

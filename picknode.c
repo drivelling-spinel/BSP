@@ -43,13 +43,13 @@ struct Seg *PickNode_traditional(struct Seg *ts, const bbox_t bbox)
 
    for (check=ts;check;check=check->next) /* Check partition against all Segs*/
     {         /*     get state of lines' relation to each other    */
-     long a = part->pdy * check->psx - part->pdx * check->psy + part->ptmp;
-     long b = part->pdy * check->pex - part->pdx * check->pey + part->ptmp;
-     if ((a^b) < 0)
-       if (a && b)
-	{                    /* Line is split; a,b nonzero, opposite sign */
-         long l=check->len;
-         long d=(l*a)/(a-b); /* Distance from start of intersection */
+     double a = part->pdy * check->psx - part->pdx * check->psy + part->ptmp;
+     double b = part->pdy * check->pex - part->pdx * check->pey + part->ptmp;
+     if (signbit(a) != signbit(b))
+       if (a !=0 && b != 0)
+        {                    /* Line is split; a,b nonzero, opposite sign */
+         double l=check->len;
+         double d=(l*a)/(a-b); /* Distance from start of intersection */
          if (d>=2)
           {
         /* If the linedef associated with this seg has a sector tag >= 900,
@@ -58,12 +58,12 @@ struct Seg *PickNode_traditional(struct Seg *ts, const bbox_t bbox)
            lifts/stairs from being messed up accidentally by splits. */
 
            if (linedefs[check->linedef].tag >= 900)
-	     cost += factor*64;
+            cost += factor*64;
 
            cost += factor;
 
            if (cost > bestcost)   /* This is the heart of my pruning idea - */
-	     goto prune;          /* it catches bad segs early on. Killough */
+            goto prune;          /* it catches bad segs early on. Killough */
 
            tot++;
           }
@@ -144,15 +144,15 @@ struct Seg *PickNode_visplane(struct Seg *ts, const bbox_t bbox)
    for (check=ts;check;check=check->next) /* Check partition against all Segs*/
     {
         /*     get state of lines' relation to each other    */
-     long a = part->pdy * check->psx - part->pdx * check->psy + part->ptmp;
-     long b = part->pdy * check->pex - part->pdx * check->pey + part->ptmp;
+     double a = part->pdy * check->psx - part->pdx * check->psy + part->ptmp;
+     double b = part->pdy * check->pex - part->pdx * check->pey + part->ptmp;
      unsigned char mask=2;
 
-     if ((a^b) < 0)
-       if (a && b)
-	{                /* Line is split; a,b nonzero, opposite sign */
-         long l=check->len;
-         long d=(l*a)/(a-b);    /* Distance from start of intersection */
+     if (signbit(a) != signbit(b))
+       if (a != 0 && b != 0)
+        {                /* Line is split; a,b nonzero, opposite sign */
+         double l=check->len;
+         double d=(l*a)/(a-b);    /* Distance from start of intersection */
          if (d>=2)
           {
         /* If the linedef associated with this seg has a sector tag >= 900,
@@ -161,12 +161,12 @@ struct Seg *PickNode_visplane(struct Seg *ts, const bbox_t bbox)
            lifts/stairs from being messed up accidentally by splits. */
 
            if (linedefs[check->linedef].tag >= 900)
-	     cost += factor*64;
+            cost += factor*64;
 
            cost += factor;
 
-	   if (cost > bestcost)    /* This is the heart of my pruning idea - */
-	     goto prune;           /* it catches bad segs early on. Killough */
+           if (cost > bestcost)    /* This is the heart of my pruning idea - */
+            goto prune;           /* it catches bad segs early on. Killough */
 
            tot++;                  /* Seg is clearly split */
            mask=4;
@@ -345,7 +345,7 @@ int DoLinesIntersect(void)
 
 	a = pdy*dx2 - pdx*dy2;
 	b = pdy*dx3 - pdx*dy3;
-	if (a != 0 && b != 0 && a != b)								/* Line is split, just check that*/
+	if (a != 0 && b != 0 && signbit(a) != signbit(b))								/* Line is split, just check that*/
 		{
 		ComputeIntersection(&x,&y);
 		dx2 = lsx - x;									/* Find distance from line start*/

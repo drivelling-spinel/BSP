@@ -124,12 +124,14 @@ add_seg(struct Seg * cs, int n, int fv, int tv,
 	cs->next = NULL;
 	cs->start = fv;
 	cs->end = tv;
-	cs->pdx = (cs->pex = realvert[tv].x)
-		- (cs->psx = realvert[fv].x);
-	cs->pdy = (cs->pey = realvert[tv].y)
-		- (cs->psy = realvert[fv].y);
+	cs->pex = realvert[tv].x;
+	cs->psx = realvert[fv].x;
+	cs->pey = realvert[tv].y;
+	cs->psy = realvert[fv].y;
+	cs->pdx = realvert[tv].x - realvert[fv].x;
+	cs->pdy = realvert[tv].y - realvert[fv].y;
 	cs->ptmp = cs->pdx * cs->psy - cs->psx * cs->pdy;
-	cs->len = sqrt( cs->pdx * cs->pdx + cs->pdy * cs->pdy);
+	cs->len = sqrt(cs->pdx * cs->pdx + cs->pdy * cs->pdy);
 
 	if ((cs->sector = sd->sector) == -1)
 		fprintf(stderr, "\nWarning: Bad sidedef in linedef %d (Z_CheckHeap error)\n", n);
