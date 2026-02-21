@@ -301,8 +301,8 @@ void ComputeIntersection(double *outx,double *outy)
 
 		a = lsx+(a2*w);
 		b = lsy+(b2*w);
-		*outx=(a<0) ? -(.5-a) : (.5+a);
-		*outy=(b<0) ? -(.5-b) : (.5+b);
+		*outx=a;
+		*outy=b;
 /*
 		modf(a + ((a<0)?-0.5:0.5) ,&w);
 		modf(b + ((b<0)?-0.5:0.5) ,&d);
