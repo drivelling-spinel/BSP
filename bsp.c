@@ -47,7 +47,7 @@ const char* unlinkwad;
 
 static struct directory *direc = NULL;
 
-struct Seg *(*PickNode)(struct Seg *, const bbox_t bbox)=PickNode_traditional;
+struct Seg *(*PickNode)(struct Seg *, const bbox_real_t bbox)=PickNode_traditional;
 static int visplane;
 static int noreject;
 
@@ -300,8 +300,9 @@ static struct directory * write_lump(struct lumplist *lump)
 
 static void sortlump(struct lumplist **link)
 {
- static const char *const lumps[11]={"THINGS", "LINEDEFS", "SIDEDEFS",
-  "VERTEXES", "VERTSUBS", "SEGS", "SSECTORS", "NODES", "SECTORS", "REJECT", "BLOCKMAP"};
+ static const char *const lumps[12]={"THINGS", "LINEDEFS", "SIDEDEFS",
+  "VERTEXES", "VERTSUBS", "SEGS", "SSECTORS", "NODES", "NODESUBS", 
+  "SECTORS", "REJECT", "BLOCKMAP"};
  int i=sizeof(lumps)/sizeof(*lumps)-1;
  struct lumplist **l;
  do

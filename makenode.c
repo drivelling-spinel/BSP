@@ -17,7 +17,7 @@ int SplitDist(struct Seg *ts)
 		dx = realvert[linedefs[ts->linedef].start].x-realvert[ts->start].x;
 		dy = realvert[linedefs[ts->linedef].start].y-realvert[ts->start].y;
 
-		if(dx == 0 && dy == 0) 
+		if(NEAR_ZERO(dx) && NEAR_ZERO(dy)) 
 			fprintf(stderr,"Trouble in SplitDist %f,%f\n",dx,dy);
 		t = sqrt((dx*dx) + (dy*dy));
 		return (int)t;
@@ -27,7 +27,7 @@ int SplitDist(struct Seg *ts)
 		dx = realvert[linedefs[ts->linedef].end].x-realvert[ts->start].x;
 		dy = realvert[linedefs[ts->linedef].end].y-realvert[ts->start].y;
 
-		if(dx == 0 && dy == 0) 
+		if(NEAR_ZERO(dx) && NEAR_ZERO(dy)) 
 			fprintf(stderr,"Trouble in SplitDist %f,%f\n",dx,dy);
 		t = sqrt((dx*dx) + (dy*dy));
 		return (int)t;
@@ -48,7 +48,7 @@ int SplitDist(struct Seg *ts)
 *---------------------------------------------------------------------------*/
 
 static inline void 
-DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_t bbox)
+DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_real_t bbox)
 {
 	struct Seg *rights,*lefts;
 	struct Seg *tmps,*best,*news,*prev;
@@ -359,14 +359,14 @@ static inline int CreateSSector(struct Seg *tmps)
 inline unsigned int ComputeAngle(double dx, double dy) {
 	double w;
 
-	w = atan2( dy , dx * (double)(65536/(M_PI*2)));
+	w = atan2( dy , dx ) * (double)(65536/(M_PI*2));
 
 	if(w<0) w = (double)65536+w;
 
 	return (unsigned) w;
 }
 
-struct Node *CreateNode(struct Seg *ts, const bbox_t bbox)
+struct Node *CreateNode(struct Seg *ts, const bbox_real_t bbox)
 {
 	struct Node *tn;
 	struct Seg *rights = NULL;

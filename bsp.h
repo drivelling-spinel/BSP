@@ -21,6 +21,9 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#define ESPILON ((double)1.0) / (((long)1)<<17);
+#define NEAR_ZERO(d) (fabs((d)) < EPSILON)
+
 /*- boolean constants ------------------------------------------------------*/
 
 #define TRUE			1
@@ -45,7 +48,7 @@ extern void (*CreateBlockmap)(const bbox_t bbox);
 
 /* bsp.c */
 void progress(void);
-void FindLimits(struct Seg *, bbox_t box);
+void FindLimits(struct Seg *, bbox_real_t box);
 int SplitDist(struct Seg *ts);
 
 extern const char *unlinkwad;
@@ -106,15 +109,15 @@ extern double psx,psy,pex,pey,pdx,pdy;
 extern double lsx,lsy,lex,ley;
 
 /* makenode.c */
-struct Node *CreateNode(struct Seg *, const bbox_t bbox);
+struct Node *CreateNode(struct Seg *, const bbox_real_t bbox);
 unsigned ComputeAngle(double,double);
 
 /* picknode.c */
 extern int factor;
 
-struct Seg *PickNode_traditional(struct Seg *, const bbox_t bbox);
-struct Seg *PickNode_visplane(struct Seg *, const bbox_t bbox);
-extern struct Seg *(*PickNode)(struct Seg *, const bbox_t bbox);
+struct Seg *PickNode_traditional(struct Seg *, const bbox_real_t bbox);
+struct Seg *PickNode_visplane(struct Seg *, const bbox_real_t bbox);
+extern struct Seg *(*PickNode)(struct Seg *, const bbox_real_t bbox);
 int DoLinesIntersect(void);
 void ComputeIntersection(double *outx, double *outy);
 

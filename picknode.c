@@ -24,7 +24,7 @@
 
 int factor=2*FACTOR+1;
 
-struct Seg *PickNode_traditional(struct Seg *ts, const bbox_t bbox)
+struct Seg *PickNode_traditional(struct Seg *ts, const bbox_real_t bbox)
 {
  struct Seg *best = ts;
  long bestcost=LONG_MAX;
@@ -123,7 +123,7 @@ struct Seg *PickNode_traditional(struct Seg *ts, const bbox_t bbox)
    counted if only invisible regions separate the visible areas.
 */
 
-struct Seg *PickNode_visplane(struct Seg *ts, const bbox_t bbox)
+struct Seg *PickNode_visplane(struct Seg *ts, const bbox_real_t bbox)
 {
  struct Seg *best = ts;
  long bestcost=LONG_MAX;
@@ -226,18 +226,18 @@ struct Seg *PickNode_visplane(struct Seg *ts, const bbox_t bbox)
       to visplane overflows. */
 
       {
-       long l;
-       if (!part->pdx)
+       double l;
+       if (part->pdx == 0)
          l=bbox[BB_TOP]-bbox[BB_BOTTOM];
        else
-         if (!part->pdy)
+         if (part->pdy == 0)
            l=bbox[BB_RIGHT]-bbox[BB_LEFT];
          else
           {
-           double t1=(part->psx-bbox[BB_RIGHT ])/(double) part->pdx;
-           double t2=(part->psx-bbox[BB_LEFT  ])/(double) part->pdx;
-           double t3=(part->psy-bbox[BB_TOP   ])/(double) part->pdy;
-           double t4=(part->psy-bbox[BB_BOTTOM])/(double) part->pdy;
+           double t1=(part->psx-bbox[BB_RIGHT ])/part->pdx;
+           double t2=(part->psx-bbox[BB_LEFT  ])/part->pdx;
+           double t3=(part->psy-bbox[BB_TOP   ])/part->pdy;
+           double t4=(part->psy-bbox[BB_BOTTOM])/part->pdy;
            if (part->pdx>0)
             {
              double t=t1;

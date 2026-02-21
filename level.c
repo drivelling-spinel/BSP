@@ -51,7 +51,7 @@ long            num_ssectors = 0;
 struct Pseg    *psegs = NULL;
 long            num_psegs = 0;
 
-static struct Pnode *pnodes = NULL;
+static struct Pnode *pnodes = NULL, *realnodes = NULL;
 static long     num_pnodes = 0;
 static long     pnode_indx = 0;
 long            num_nodes = 0;
@@ -78,7 +78,7 @@ static struct Seg *CreateSegs(void);
 /* and comparing the vertices at both ends. */
 /*--------------------------------------------------------------------------*/
 
-void FindLimits(struct Seg * ts, bbox_t box)
+void FindLimits(struct Seg * ts, bbox_real_t box)
 {
 	double          minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN,
 	                maxy = INT_MIN;
@@ -277,24 +277,40 @@ GetSectors(void)
 /* Converts the nodes from a btree into the array format for inclusion in 
  * the .wad. Frees the btree as it goes */
 
+#define FIXED(d)  (long)((d) * (((long)1)<<16))
+#define SHORT(d)  (short int)(0xffff & (FIXED(d) >> 16))
+#define FRAC(d)   (short int)(0xffff & FIXED(d))
+
 static signed short ReverseNodes(struct Node * tn)
 {
-	struct Pnode   *pn;
-
+	struct Pnode   *pn, *rn;
+	int i;
 	tn->chright = tn->nextr ? ReverseNodes(tn->nextr) :
 		tn->chright | 0x8000;
 
 	tn->chleft = tn->nextl ? ReverseNodes(tn->nextl) :
 		tn->chleft | 0x8000;
 
+	rn = realnodes + pnode_indx;
 	pn = pnodes + pnode_indx++;
 
-	pn->x = tn->x;
-	pn->y = tn->y;
-	pn->dx = tn->dx;
-	pn->dy = tn->dy;
-	memcpy(pn->leftbox , tn->leftbox , sizeof(pn->leftbox ));
-	memcpy(pn->rightbox, tn->rightbox, sizeof(pn->rightbox));
+	memset(rn, 0, sizeof(*rn));
+
+	pn->x = SHORT(tn->x);
+	rn->x = FRAC(tn->x);
+	pn->y = SHORT(tn->y);
+	rn->y = FRAC(tn->y);
+	pn->dx = SHORT(tn->dx);
+	rn->dx = FRAC(tn->dx);
+	pn->dy = SHORT(tn->dy);
+	rn->dy = FRAC(tn->dy);
+	for(i = BB_TOP ; i <= BB_RIGHT ; i++)
+	{
+		pn->leftbox[i] = SHORT(tn->leftbox[i]); 
+		rn->leftbox[i] = FRAC(tn->leftbox[i]); 
+		pn->rightbox[i] = SHORT(tn->rightbox[i]);
+		rn->rightbox[i] = FRAC(tn->rightbox[i]);
+	}
 	pn->chright = tn->chright;
 	pn->chleft = tn->chleft;
 
@@ -326,7 +342,9 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 {
 	struct Seg     *tsegs;
 	static struct Node *nodelist;
-	bbox_t mapbound;
+	bbox_real_t mapbound;
+	bbox_t blockmapbound;
+	int i;
 
 	Verbose("\nBuilding nodes on %-.8s\n\n", current_level_name);
 
@@ -349,7 +367,7 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 
 	FindLimits(tsegs,mapbound);	/* Find limits of vertices */
 
-	Verbose("Map goes from (%d,%d) to (%d,%d)\n", 
+	Verbose("Map goes from (%g,%g) to (%g,%g)\n", 
 		mapbound[BB_TOP   ],mapbound[BB_LEFT  ],
 		mapbound[BB_BOTTOM],mapbound[BB_RIGHT ]);
 
@@ -379,13 +397,19 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 		memset(data, 0, reject_size);
 		add_lump("REJECT", data, reject_size);
 	}
-	CreateBlockmap(mapbound);
+	for(i = BB_TOP ; i <= BB_RIGHT ; i++)
+	{
+		blockmapbound[i] = mapbound[i]; 
+	}
+	CreateBlockmap(blockmapbound);
 
 	pnodes = GetMemory(sizeof(struct Pnode) * num_nodes);
+	realnodes = GetMemory(sizeof(struct Pnode) * num_nodes);
 	num_pnodes = 0;
 	pnode_indx = 0;
 	ReverseNodes(nodelist);
 	add_lump("NODES", pnodes, sizeof(struct Pnode) * num_pnodes);
+	add_substream("NODESUBS", realnodes, sizeof(struct Pnode) * num_pnodes);
 
 	free(SectorHits);
 
@@ -414,13 +438,10 @@ static void RealToFixed(void)
 
 	for(i = 0 ; i < num_verts ; i ++)
 	{
-		long fx, fy;
-		fx = (long)(realvert[i].x * (((long)1)<<16));
-		fy = (long)(realvert[i].y * (((long)1)<<16));
-		vertices[i].x = (short int)(0xffff & (fx >> 16));
-		frac[i].x = (short int)(0xffff & fx);
-		vertices[i].y = (short int)(0xffff & (fy >> 16));
-		frac[i].y = (short int)(0xffff & fy);
+		vertices[i].x = SHORT(realvert[i].x);
+		frac[i].x = FRAC(realvert[i].x);
+		vertices[i].y = SHORT(realvert[i].y);
+		frac[i].y = FRAC(realvert[i].y);
 	}
 	free(realvert);
 	realvert = NULL;

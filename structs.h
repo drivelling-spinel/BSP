@@ -120,17 +120,18 @@ struct Pseg
 
 /* cph - dedicated type for bounding boxes, as in the Doom source */
 typedef int16_t bbox_t[4];
+typedef double bbox_real_t[4];
 enum { BB_TOP, BB_BOTTOM, BB_LEFT, BB_RIGHT };
 
 struct Node
 {
    double x, y;			/* starting point*/
    double dx, dy;			/* offset to ending point*/
-   bbox_t rightbox;			/* bounding rectangle 1*/
-   bbox_t leftbox;			/* bounding rectangle 2*/
+   bbox_real_t rightbox;			/* bounding rectangle 1*/
+   bbox_real_t leftbox;			/* bounding rectangle 2*/
    int16_t chright, chleft;		/* Node or SSector (if high bit is set)*/
    struct Node *nextr,*nextl;
-   int16_t node_num;	        		/* starting at 0 (but reversed when done)*/
+   int16_t node_num;			/* starting at 0 (but reversed when done)*/
 //   long ptmp;
 } __attribute__((packed));
 
