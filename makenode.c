@@ -17,7 +17,7 @@ int SplitDist(struct Seg *ts)
 		dx = realvert[linedefs[ts->linedef].start].x-realvert[ts->start].x;
 		dy = realvert[linedefs[ts->linedef].start].y-realvert[ts->start].y;
 
-		if(NEAR_ZERO(dx) && NEAR_ZERO(dy)) 
+		if(NEAR_ZERO(dx) && NEAR_ZERO(dy))
 			fprintf(stderr,"Trouble in SplitDist %f,%f\n",dx,dy);
 		t = sqrt((dx*dx) + (dy*dy));
 		return (int)t;
@@ -27,7 +27,7 @@ int SplitDist(struct Seg *ts)
 		dx = realvert[linedefs[ts->linedef].end].x-realvert[ts->start].x;
 		dy = realvert[linedefs[ts->linedef].end].y-realvert[ts->start].y;
 
-		if(NEAR_ZERO(dx) && NEAR_ZERO(dy)) 
+		if(NEAR_ZERO(dx) && NEAR_ZERO(dy))
 			fprintf(stderr,"Trouble in SplitDist %f,%f\n",dx,dy);
 		t = sqrt((dx*dx) + (dy*dy));
 		return (int)t;

@@ -306,8 +306,8 @@ static signed short ReverseNodes(struct Node * tn)
 	rn->dy = FRAC(tn->dy);
 	for(i = BB_TOP ; i <= BB_RIGHT ; i++)
 	{
-		pn->leftbox[i] = SHORT(tn->leftbox[i]); 
-		rn->leftbox[i] = FRAC(tn->leftbox[i]); 
+		pn->leftbox[i] = SHORT(tn->leftbox[i]);
+		rn->leftbox[i] = FRAC(tn->leftbox[i]);
 		pn->rightbox[i] = SHORT(tn->rightbox[i]);
 		rn->rightbox[i] = FRAC(tn->rightbox[i]);
 	}
@@ -353,7 +353,7 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 	num_nodes = 0;
 
 	GetLinedefs();		/* Get and convert linedefs first */
-        ConvertLinedef();       /* so we can to remove redundant */
+	ConvertLinedef();	/* so we can to remove redundant */
 	GetVertexes();		/* vertices here. */
 	GetSidedefs();
 	GetSectors();
@@ -367,7 +367,7 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 
 	FindLimits(tsegs,mapbound);	/* Find limits of vertices */
 
-	Verbose("Map goes from (%g,%g) to (%g,%g)\n", 
+	Verbose("Map goes from (%g,%g) to (%g,%g)\n",
 		mapbound[BB_TOP   ],mapbound[BB_LEFT  ],
 		mapbound[BB_BOTTOM],mapbound[BB_RIGHT ]);
 
@@ -399,7 +399,7 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 	}
 	for(i = BB_TOP ; i <= BB_RIGHT ; i++)
 	{
-		blockmapbound[i] = mapbound[i]; 
+		blockmapbound[i] = mapbound[i];
 	}
 	CreateBlockmap(blockmapbound);
 

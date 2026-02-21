@@ -127,8 +127,8 @@ struct Node
 {
    double x, y;			/* starting point*/
    double dx, dy;			/* offset to ending point*/
-   bbox_real_t rightbox;			/* bounding rectangle 1*/
-   bbox_real_t leftbox;			/* bounding rectangle 2*/
+   bbox_real_t rightbox;		/* bounding rectangle 1*/
+   bbox_real_t leftbox;		/* bounding rectangle 2*/
    int16_t chright, chleft;		/* Node or SSector (if high bit is set)*/
    struct Node *nextr,*nextl;
    int16_t node_num;			/* starting at 0 (but reversed when done)*/
