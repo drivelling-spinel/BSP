@@ -50,7 +50,7 @@ Getting BSP
 
 Usage
 
-   bsp [ -noreject ] [-noblockma] [-factor nn ] [-frac] [ -q ] 
+   bsp [ -noreject ] [-noblockma] [-factor nn ] [-frac] [-nomagic] [ -q ] 
    [ -picknode { traditional | visplane } ] [ -blockmap { old | comp } ] 
    inwad [ [ -o ] outwad ]
 
@@ -95,6 +95,9 @@ Usage
    -frac
           Enables generation of anonymous blocks of data in WAD to store
           fractional parts of coordinates of verices and nodes
+
+   -nomagic
+          Disables "special effects" and "precious" linedefs and sector support
 
    inwad is the input WAD file. This may contain any number of levels and
    other lumps. The nodes and associated data resources will be built for

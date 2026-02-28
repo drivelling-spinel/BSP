@@ -123,7 +123,9 @@ double ComputeAngle(double,double);
 extern int factor;
 
 struct Seg *PickNode_traditional(struct Seg *, const bbox_real_t bbox, int keep_precious);
+#ifdef PICKMODERN
 struct Seg *PickNode_modern(struct Seg *, const bbox_real_t bbox, int keep_precious);
+#endif
 struct Seg *PickNode_visplane(struct Seg *, const bbox_real_t bbox, int keep_precious);
 extern struct Seg *(*PickNode)(struct Seg *, const bbox_real_t bbox, int keep_precious);
 

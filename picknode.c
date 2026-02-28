@@ -100,6 +100,7 @@ struct Seg *PickNode_traditional(struct Seg *ts, const bbox_real_t bbox, int kee
 }
 
 
+#ifdef PICKMODERN
 struct Seg *PickNode_modern(struct Seg *ts, const bbox_real_t bbox, int keep_precious)
 {
  struct Seg *best = ts;
@@ -171,6 +172,7 @@ struct Seg *PickNode_modern(struct Seg *ts, const bbox_real_t bbox, int keep_pre
   }
  return best;		/* All finished, return best Seg*/
 }
+#endif
 
 /* Lee Killough 06/1997:
 

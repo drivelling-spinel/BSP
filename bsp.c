@@ -349,11 +349,17 @@ void usage(const char* path)
         "       (If no output.wad is specified, tmp.wad is written)"CRLF CRLF
         "Options:"CRLF CRLF
         "  -factor <nnn>  Changes the cost assigned to SEG splits"CRLF
-        "  -picknode {traditional|visplane|modern}"CRLF
+        "  -picknode {traditional|visplane"
+#ifdef PICKMODERN
+                                          "|modern"
+#endif
+                                                  "}"CRLF
         "                 Selects either the traditional nodeline choosing algorithm"CRLF
         "                 (balance the tree and minimise splits) or Lee's algorithm"CRLF
         "                 to minimise visplanes (try to balance distinct sector refs)"CRLF
+#ifdef PICKMODERN
         "                 or \"modern\" experimental added specifically to this build"CRLF
+#endif        
         "  -blockmap {old|comp}"CRLF
         "                 Selects either the old straightforward blockmap"CRLF
         "                 generation, or the new compressed blockmap code"CRLF
@@ -377,7 +383,9 @@ struct multi_option {
 const struct multi_option picknode_options[] = {
 {"traditional", "Optimising for SEG splits and balance",PickNode_traditional},
 {"visplane", "Optimising for fewest visplanes", PickNode_visplane},
+#ifdef PICKMODERN
 {"modern", "Experimental \"real\" numbers version", PickNode_modern},
+#endif
 {NULL,NULL,NULL},
 };
 
@@ -560,7 +568,10 @@ int main(int argc,char *argv[])
      strncpy(current_level_name,lump->dir->name,8);
      current_level_name[8] = 0;
      DoLevel(current_level_name, current_level = lump->level, !nomagic, 
-        PickNode == PickNode_modern ? 0 : EDGE_TOLERANCE);
+#ifdef PICKMODERN
+        PickNode == PickNode_modern ? 0 : 
+#endif
+        EDGE_TOLERANCE);
      sortlump(&lump->level);
      for (l=lump->level; l; l=l->next)
        {
