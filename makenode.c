@@ -9,6 +9,11 @@
 #endif
 
 double node_x, node_y, node_dx, node_dy;
+static int keep_precious;
+
+static int DoLinesIntersect(int tolerance);
+static void ComputeIntersection(double *outx, double *outy);
+static void RecalcPdata(struct Seg *s);
 
 /*--------------------------------------------------------------------------*/
 
@@ -52,7 +57,7 @@ double SplitDist(struct Seg *ts)
 *---------------------------------------------------------------------------*/
 
 static inline void 
-DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_real_t bbox)
+DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_real_t bbox, int tolerance)
 {
 	struct Seg *rights,*lefts;
 	struct Seg *tmps,*best,*news,*prev;
@@ -64,7 +69,7 @@ DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_real_t b
 	double x,y;
 	int val;
 
-	best = PickNode(ts,bbox);			/* Pick best node to use.*/
+	best = PickNode(ts,bbox,keep_precious);			/* Pick best node to use.*/
 
 	if(best == NULL) ProgError("Couldn't pick nodeline!");
 
@@ -102,7 +107,7 @@ DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_real_t b
 			lsy = realvert[tmps->start].y;	/* change for all the interations of*/
 			lex = realvert[tmps->end].x;		/* the inner loop!*/
 			ley = realvert[tmps->end].y;
-			val = DoLinesIntersect();
+			val = DoLinesIntersect(tolerance);
 			if((val&2 && val&64) || (val&4 && val&32))	/* If intersecting !!*/
 				{
 				ComputeIntersection(&x,&y);
@@ -116,6 +121,8 @@ DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_real_t b
 				tmps->next = news;
 				news->start = num_verts;
 				tmps->end = num_verts;
+				RecalcPdata(tmps);
+				RecalcPdata(news);
 				news->dist = SplitDist(news);
 /*				printf("splitting dist = %d"CRLF,news->dist);*/
 /*				printf("splitting vertices = %d,%d,%d,%d"CRLF,tmps->start,tmps->end,news->start,news->end);*/
@@ -251,7 +258,7 @@ DivideSegs(struct Seg *ts, struct Seg **rs, struct Seg **ls, const bbox_real_t b
 
 /*--------------------------------------------------------------------------*/
 
-static inline int IsItConvex( struct Seg *ts)
+static inline int IsItConvex( struct Seg *ts, int tolerance )
 {
    struct Seg *line=ts,*check;
    int   sector,val;
@@ -261,12 +268,12 @@ static inline int IsItConvex( struct Seg *ts)
 
    sector = sidedefs[ts->flip ? linedefs[ts->linedef].sidedef2 :
                                 linedefs[ts->linedef].sidedef1].sector;
-   if (sectors[sector].tag < 900)
+   if (!keep_precious || sectors[sector].tag < 900)
      while ((line=line->next)!=0)
       {
        int ts=sidedefs[line->flip ? linedefs[line->linedef].sidedef2 :
                                     linedefs[line->linedef].sidedef1].sector;
-       if (ts != sector && sectors[ts].tag < 900)
+       if (ts != sector && (!keep_precious || sectors[ts].tag < 900))
            return TRUE;
       }
 
@@ -288,7 +295,7 @@ static inline int IsItConvex( struct Seg *ts)
 				lsy = realvert[check->start].y;	/* change for all the interations of*/
 				lex = realvert[check->end].x;		/* the inner loop!*/
 				ley = realvert[check->end].y;
-				val = DoLinesIntersect();
+				val = DoLinesIntersect(tolerance);
 				if(val&34) return TRUE;
 				}
 			}
@@ -325,18 +332,24 @@ static inline int CreateSSector(struct Seg *tmps)
 		if(num_psegs == 0)
 			{
 			psegs = GetMemory(sizeof(struct Pseg));
+			fsegs = GetMemory(sizeof(struct SegFrac));
 			}
 		else
 			{
 			psegs = ResizeMemory(psegs,sizeof(struct Pseg)*(num_psegs+1));
+			fsegs = ResizeMemory(fsegs,sizeof(struct SegFrac)*(num_psegs+1));
 			}
 
 		psegs[num_psegs].start = tmps->start;
 		psegs[num_psegs].end = tmps->end;
-		psegs[num_psegs].angle = tmps->angle;
+		psegs[num_psegs].angle = SHORT(tmps->angle);
 		psegs[num_psegs].linedef = tmps->linedef;
 		psegs[num_psegs].flip = tmps->flip;
-		psegs[num_psegs].dist = tmps->dist;
+		psegs[num_psegs].dist = SHORT(tmps->dist);
+
+		fsegs[num_psegs].angle = FRAC(tmps->angle);
+		fsegs[num_psegs].dist = FRAC(tmps->dist);
+
 /*
 		printf("%d,%d,%u,%d,%d,%u"CRLF,
 			psegs[num_psegs].start,
@@ -360,25 +373,27 @@ static inline int CreateSSector(struct Seg *tmps)
 
 /*- translate (dx, dy) into an integer angle value (0-65535) ---------------*/
 
-inline unsigned int ComputeAngle(double dx, double dy) {
+inline double ComputeAngle(double dx, double dy) {
 	double w;
 
 	w = atan2( dy , dx ) * (double)(65536/(M_PI*2));
 
 	if(w<0) w = (double)65536+w;
 
-	return (unsigned) w;
+	return w;
 }
 
-struct Node *CreateNode(struct Seg *ts, const bbox_real_t bbox)
+struct Node *CreateNode(struct Seg *ts, const bbox_real_t bbox, int keep, int tolerance)
 {
 	struct Node *tn;
 	struct Seg *rights = NULL;
 	struct Seg *lefts = NULL;
 
+	keep_precious = keep;
+
 	tn = GetMemory( sizeof( struct Node));				/* Create a node*/
  
-	DivideSegs(ts,&rights,&lefts,bbox);						/* Divide node in two*/
+	DivideSegs(ts,&rights,&lefts,bbox,tolerance);						/* Divide node in two*/
 
 	num_nodes++;
 
@@ -389,7 +404,7 @@ struct Node *CreateNode(struct Seg *ts, const bbox_real_t bbox)
 
 	FindLimits(lefts,tn->leftbox);				/* Find limits of vertices	*/
 
-	if(IsItConvex(lefts))	  								/* Check lefthand side*/
+	if(IsItConvex(lefts,tolerance))	  								/* Check lefthand side*/
 		{
 	        if (verbosity > 1) 
 			{
@@ -401,7 +416,7 @@ struct Node *CreateNode(struct Seg *ts, const bbox_real_t bbox)
 				textcolor(LIGHTGRAY);
 #endif
 			}
-		tn->nextl = CreateNode(lefts,tn->leftbox);	/* still segs remaining*/
+		tn->nextl = CreateNode(lefts,tn->leftbox,keep_precious,tolerance);	/* still segs remaining*/
 		tn->chleft = 0;
 	        if (verbosity > 1);
 			{
@@ -419,7 +434,7 @@ struct Node *CreateNode(struct Seg *ts, const bbox_real_t bbox)
 
 	FindLimits(rights, tn->rightbox);										/* Find limits of vertices*/
 	
-	if(IsItConvex(rights))									/* Check righthand side*/
+	if(IsItConvex(rights,tolerance))									/* Check righthand side*/
 		{
 	        if (verbosity > 1) 
 			{
@@ -431,7 +446,7 @@ struct Node *CreateNode(struct Seg *ts, const bbox_real_t bbox)
 				textcolor(LIGHTGRAY);
 #endif
 			}
-		tn->nextr = CreateNode(rights, tn->rightbox);	/* still segs remaining*/
+		tn->nextr = CreateNode(rights, tn->rightbox, keep_precious, tolerance);	/* still segs remaining*/
 		tn->chright = 0;
 	        if (verbosity > 1);
 			{
@@ -505,4 +520,133 @@ struct Node *CreateNode(struct Seg *ts, const bbox_real_t bbox)
    global list and ready to be saved to disk.
 
 *---------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*
+ Calculate the point of intersection of two lines. ps?->pe? & ls?->le?
+ returns int xcoord, int ycoord
+*---------------------------------------------------------------------------*/
+
+void ComputeIntersection(double *outx,double *outy)
+{
+	double a,b,a2,b2,l2,w,d;
+
+	double dx,dy,dx2,dy2;
+
+	dx = pex - psx;
+	dy = pey - psy;
+	dx2 = lex - lsx;
+	dy2 = ley - lsy;
+
+	if (NEAR_ZERO(dx) && NEAR_ZERO(dy)) ProgError("Trouble in ComputeIntersection dx,dy");
+/*	l = sqrt((dx*dx) + (dy*dy));  unnecessary - killough */
+	if(NEAR_ZERO(dx2) && NEAR_ZERO(dy2)) ProgError("Trouble in ComputeIntersection dx2,dy2");
+	l2 = sqrt((dx2*dx2) + (dy2*dy2));
+
+	a = dx /* / l */;  /* no normalization of a,b necessary,   */
+	b = dy /* / l */;  /* since division by d in formula for w */
+	a2 = dx2 / l2;     /* cancels it out. */
+	b2 = dy2 / l2;
+	d = b * a2 - a * b2;
+	if (!NEAR_ZERO(d))
+		{
+		w = ((a*(lsy-psy))+(b*(psx-lsx))) / d;
+
+/*		printf("Intersection at (%f,%f)"CRLF,x2+(a2*w),y2+(b2*w));*/
+
+		a = lsx+(a2*w);
+		b = lsy+(b2*w);
+		*outx=a;
+		*outy=b;
+/*
+		modf(a + ((a<0)?-0.5:0.5) ,&w);
+		modf(b + ((b<0)?-0.5:0.5) ,&d);
+		*outx = w;
+		*outy = d;
+*/
+		}
+	else
+		{
+		*outx = lsx;
+		*outy = lsy;
+		}
+}
+
+/*---------------------------------------------------------------------------*
+ Because this is (was) used a horrendous amount of times in the inner loops, the
+ coordinate of the lines are setup outside of the routine in global variables
+ psx,psy,pex,pey = partition line coordinates
+ lsx,lsy,lex,ley = checking line coordinates
+ The routine returns 'val' which has 3 bits assigned to the the start and 3
+ to the end. These allow a decent evaluation of the lines state.
+ bit 0,1,2 = checking lines starting point and bits 4,5,6 = end point
+ these bits mean 	0,4 = point is on the same line
+ 						1,5 = point is to the left of the line
+ 						2,6 = point is to the right of the line
+ There are some failsafes in here, these mainly check for small errors in the
+ side checker.
+*---------------------------------------------------------------------------*/
+
+int DoLinesIntersect(int tolerance)
+{
+	double x,y;
+	short int val = 0;
+
+	double dx2,dy2,dx3,dy3,a,b,l;
+
+	double d_tol = tolerance == 0 ? EPSILON : tolerance;
+
+	dx2 = psx - lsx;									/* Checking line -> partition*/
+	dy2 = psy - lsy;
+	dx3 = psx - lex;
+	dy3 = psy - ley;
+
+	a = pdy*dx2 - pdx*dy2;
+	b = pdy*dx3 - pdx*dy3;
+	if (!NEAR_ZERO(a) && !NEAR_ZERO(b) && signbit(a) != signbit(b))								/* Line is split, just check that*/
+		{
+		ComputeIntersection(&x,&y);
+		dx2 = lsx - x;									/* Find distance from line start*/
+		dy2 = lsy - y;									/* to split point*/
+		if(NEAR_ZERO(dx2) && NEAR_ZERO(dy2)) a = 0;
+		else
+			{
+			l = dx2*dx2+dy2*dy2;				/* If either ends of the split*/
+			if (l < d_tol) a = 0;							/* are smaller than 2 pixs then*/
+			}												/* assume this starts on part line*/
+		dx3 = lex - x;									/* Find distance from line end*/
+		dy3 = ley - y;									/* to split point*/
+		if(NEAR_ZERO(dx3) && NEAR_ZERO(dy3)) b = 0;
+		else
+			{
+			l = dx3*dx3 + dy3*dy3;					/* same as start of line*/
+			if (l < d_tol) b = 0;
+			}
+		}
+
+	if(NEAR_ZERO(a)) val = val | 16;								/* start is on middle*/
+         else
+	if(a < 0) val = val | 32;						/* start is on left side*/
+        else
+	/* if(a > 0) */ val = val | 64;						/* start is on right side*/
+
+	if (NEAR_ZERO(b)) val = val | 1;						/* end is on middle*/
+        else
+	if(b < 0) val = val | 2;						/* end is on left side*/
+        else
+	/* if(b > 0) */ val = val | 4;						/* end is on right side*/
+
+	return val;
+}
+
+
+void RecalcPdata(struct Seg * cs)
+{
+	cs->pdx = realvert[cs->end].x - realvert[cs->start].x;
+	cs->pdy = realvert[cs->end].y - realvert[cs->start].y;
+	cs->ptmp = cs->pdx * cs->psy - cs->psx * cs->pdy;
+	cs->len = sqrt(cs->pdx * cs->pdx + cs->pdy * cs->pdy);
+
+	cs->angle = ComputeAngle(cs->pdx, cs->pdy);
+	cs->angle = fmod(cs->angle + cs->angle_shift, 65536.0);
+}
 

@@ -24,6 +24,12 @@
 #define EPSILON (((double)1.0) / (((long)1)<<16))
 #define NEAR_ZERO(d) (fabs((d)) < EPSILON)
 
+#define EDGE_TOLERANCE 4
+
+#define FIXED(d)  (unsigned long)((d) * (((long)1)<<16))
+#define SHORT(d)  (unsigned short)(0xffff & (FIXED(d) >> 16))
+#define FRAC(d)   (unsigned short)(0xffff & FIXED(d))
+
 /*- boolean constants ------------------------------------------------------*/
 
 #define TRUE			1
@@ -80,7 +86,7 @@ void* ResizeMemory(void *, size_t) __attribute__((warn_unused_result));
 
 /* level.c */
 
-void DoLevel(const char *current_level_name, struct lumplist * current_level);
+void DoLevel(const char *current_level_name, struct lumplist * current_level, int keep_precious, int tolerance);
 
 extern struct Vertex *vertices;
 extern struct RealVert *realvert;
@@ -99,6 +105,7 @@ extern struct SSector *ssectors;
 extern long num_ssectors;
 
 extern struct Pseg *psegs;
+extern struct SegFrac *fsegs;
 extern long num_psegs;
 
 extern long num_nodes;
@@ -109,17 +116,16 @@ extern double psx,psy,pex,pey,pdx,pdy;
 extern double lsx,lsy,lex,ley;
 
 /* makenode.c */
-struct Node *CreateNode(struct Seg *, const bbox_real_t bbox);
-unsigned ComputeAngle(double,double);
+struct Node *CreateNode(struct Seg *, const bbox_real_t bbox, int keep_precious, int tolerance);
+double ComputeAngle(double,double);
 
 /* picknode.c */
 extern int factor;
 
-struct Seg *PickNode_traditional(struct Seg *, const bbox_real_t bbox);
-struct Seg *PickNode_visplane(struct Seg *, const bbox_real_t bbox);
-extern struct Seg *(*PickNode)(struct Seg *, const bbox_real_t bbox);
-int DoLinesIntersect(void);
-void ComputeIntersection(double *outx, double *outy);
+struct Seg *PickNode_traditional(struct Seg *, const bbox_real_t bbox, int keep_precious);
+struct Seg *PickNode_modern(struct Seg *, const bbox_real_t bbox, int keep_precious);
+struct Seg *PickNode_visplane(struct Seg *, const bbox_real_t bbox, int keep_precious);
+extern struct Seg *(*PickNode)(struct Seg *, const bbox_real_t bbox, int keep_precious);
 
 /* malloc edbugging with dmalloc */
 #ifdef WITH_DMALLOC

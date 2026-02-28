@@ -51,11 +51,13 @@ const char* unlinkwad;
 
 static struct directory *direc = NULL;
 
-struct Seg *(*PickNode)(struct Seg *, const bbox_real_t bbox)=PickNode_traditional;
-static int visplane;
+struct Seg *(*PickNode)(struct Seg *, const bbox_real_t bbox, int keep_precious)=PickNode_traditional;
+
 static int noreject;
 
 static int noblockmap;
+
+static int nomagic;
 
 static int frac;
 
@@ -312,9 +314,9 @@ static struct directory * write_lump(struct lumplist *lump)
 
 static void sortlump(struct lumplist **link)
 {
- static const char *const lumps[12]={"THINGS", "LINEDEFS", "SIDEDEFS",
-  "VERTEXES", "VERTSUBS", "SEGS", "SSECTORS", "NODES", "NODESUBS", 
-  "SECTORS", "REJECT", "BLOCKMAP"};
+ static const char *const lumps[13]={"THINGS", "LINEDEFS", "SIDEDEFS",
+  "VERTEXES", "VERTSUBS", "SEGS", "SEGSSUBS", "SSECTORS", "NODES", 
+  "NODESUBS", "SECTORS", "REJECT", "BLOCKMAP"};
  int i=sizeof(lumps)/sizeof(*lumps)-1;
  struct lumplist **l;
  do
@@ -347,17 +349,19 @@ void usage(const char* path)
         "       (If no output.wad is specified, tmp.wad is written)"CRLF CRLF
         "Options:"CRLF CRLF
         "  -factor <nnn>  Changes the cost assigned to SEG splits"CRLF
-        "  -picknode {traditional|visplane}"CRLF
-	"                 Selects either the traditional nodeline choosing algorithm"CRLF
-	"                 (balance the tree and minimise splits) or Lee's algorithm"CRLF
-	"                 to minimise visplanes (try to balance distinct sector refs)"CRLF
+        "  -picknode {traditional|visplane|modern}"CRLF
+        "                 Selects either the traditional nodeline choosing algorithm"CRLF
+        "                 (balance the tree and minimise splits) or Lee's algorithm"CRLF
+        "                 to minimise visplanes (try to balance distinct sector refs)"CRLF
+        "                 or \"modern\" experimental added specifically to this build"CRLF
         "  -blockmap {old|comp}"CRLF
         "                 Selects either the old straightforward blockmap"CRLF
         "                 generation, or the new compressed blockmap code"CRLF
         "  -noreject      Does not clobber reject map"CRLF
         "  -noblockmap    Leaves existing blockmap alone"CRLF
-        "  -frac          Enables saving fraction part of verterx coordinates"CRLF
-	"  -q             Quiet mode (only errors are printed)"CRLF
+        "  -nomagic       Do not keep \"precious\" sectors and lines intact"CRLF
+        "  -frac          Enables saving fraction part of coordinates"CRLF
+        "  -q             Quiet mode (only errors are printed)"CRLF
        );
  exit(1);
 }
@@ -373,6 +377,7 @@ struct multi_option {
 const struct multi_option picknode_options[] = {
 {"traditional", "Optimising for SEG splits and balance",PickNode_traditional},
 {"visplane", "Optimising for fewest visplanes", PickNode_visplane},
+{"modern", "Experimental \"real\" numbers version", PickNode_modern},
 {NULL,NULL,NULL},
 };
 
@@ -396,6 +401,7 @@ static void parse_options(int argc, char *argv[])
             {"-blockmap", &CreateBlockmap, MULTI, blockmap_options},
             {"-noreject", &noreject, NONE},
             {"-noblockmap", &noblockmap, NONE},
+            {"-nomagic", &nomagic, NONE},
             {"-q", &quiet, NONE},
             {"-factor", &factor, INT},
             {"-o", fnames+1, STRING},
@@ -519,12 +525,6 @@ int main(int argc,char *argv[])
 
  Verbose("Creating nodes using tunable factor of %d"CRLF,factor);
 
- if (visplane)
-  {
-   Verbose(CRLF"Taking special measures to reduce the chances of visplane overflow");
-   PickNode=PickNode_visplane;
-  }
-
  {
    int fd = open(outwad,O_WRONLY | O_CREAT | O_EXCL | O_BINARY,0644);
    outfile = NULL;
@@ -559,7 +559,8 @@ int main(int argc,char *argv[])
      struct lumplist* l;
      strncpy(current_level_name,lump->dir->name,8);
      current_level_name[8] = 0;
-     DoLevel(current_level_name, current_level = lump->level);
+     DoLevel(current_level_name, current_level = lump->level, !nomagic, 
+        PickNode == PickNode_modern ? 0 : EDGE_TOLERANCE);
      sortlump(&lump->level);
      for (l=lump->level; l; l=l->next)
        {

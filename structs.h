@@ -97,15 +97,16 @@ struct Seg
 {
    short int start;     /* from this vertex ... */
    short int end;       /* ... to this vertex */
-   unsigned short angle;/* angle (0 = east, 16384 = north, ...) */
+   double angle;/* angle (0 = east, 16384 = north, ...) */
    short int linedef;   /* linedef that this seg goes along*/
    short int flip;      /* true if not the same direction as linedef */
-   unsigned short dist; /* distance from starting point */
+   double dist; /* distance from starting point */
    struct Seg *next;
    double psx,psy,pex,pey;  /* Start, end coordinates */
    double pdx,pdy,ptmp;      /* Used in intersection calculations */
    double len;
    short sector;
+   double angle_shift;
 } __attribute__((packed));
 
 struct Pseg
@@ -117,6 +118,13 @@ struct Pseg
    short int flip;      /* true if not the same direction as linedef */
    unsigned short dist; /* distance from starting point */
 } __attribute__((packed));
+
+struct SegFrac
+{
+   unsigned short angle;
+   unsigned short dist;
+}__attribute__((packed));
+
 
 /* cph - dedicated type for bounding boxes, as in the Doom source */
 typedef int16_t bbox_t[4];

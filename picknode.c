@@ -24,7 +24,7 @@
 
 int factor=2*FACTOR+1;
 
-struct Seg *PickNode_traditional(struct Seg *ts, const bbox_real_t bbox)
+struct Seg *PickNode_traditional(struct Seg *ts, const bbox_real_t bbox, int keep_precious)
 {
  struct Seg *best = ts;
  long bestcost=LONG_MAX;
@@ -57,7 +57,7 @@ struct Seg *PickNode_traditional(struct Seg *ts, const bbox_real_t bbox)
            are exhausted. This is used to protect deep water and invisible
            lifts/stairs from being messed up accidentally by splits. */
 
-           if (linedefs[check->linedef].tag >= 900)
+           if (keep_precious && linedefs[check->linedef].tag >= 900)
             cost += factor*64;
 
            cost += factor;
@@ -100,6 +100,78 @@ struct Seg *PickNode_traditional(struct Seg *ts, const bbox_real_t bbox)
 }
 
 
+struct Seg *PickNode_modern(struct Seg *ts, const bbox_real_t bbox, int keep_precious)
+{
+ struct Seg *best = ts;
+ long bestcost=LONG_MAX;
+ struct Seg *part;
+ int cnt=0;
+
+ for (part=ts;part;part=part->next) /* Count once and for all */
+   cnt++;
+
+ for (part=ts;part;part = part->next)	/* Use each Seg as partition*/
+  {
+   struct Seg *check;
+   long cost=0,tot=0,diff=cnt;
+
+   progress();           	        /* Something for the user to look at.*/
+
+   for (check=ts;check;check=check->next) /* Check partition against all Segs*/
+    {         /*     get state of lines' relation to each other    */
+     double a = part->pdy * check->psx - part->pdx * check->psy + part->ptmp;
+     double b = part->pdy * check->pex - part->pdx * check->pey + part->ptmp;
+     if (signbit(a) != signbit(b))
+      {                    /* Line is split; a,b nonzero, opposite sign */
+      /* If the linedef associated with this seg has a sector tag >= 900,
+         treat it as precious; i.e. don't split it unless all other options
+         are exhausted. This is used to protect deep water and invisible
+         lifts/stairs from being messed up accidentally by splits. */
+
+        if (keep_precious && linedefs[check->linedef].tag >= 900)
+          cost += factor*64;
+ 
+        if (!NEAR_ZERO(a) && !NEAR_ZERO(b))
+         {
+           double d=a/(a-b); 
+           if (d < 0.25 || d > 0.75) cost += 2*factor;
+           if (d < 0.125 || d > 0.875) cost += 4*factor;
+           if (d < 0.0625 || d > 0.9375) cost += 8*factor;
+         }
+        else
+         cost += factor;
+
+        if (cost > bestcost)   /* This is the heart of my pruning idea - */
+          goto prune;          /* it catches bad segs early on. Killough */
+
+
+        tot++;
+      }
+     else
+      if (a<=0 && (!NEAR_ZERO(a) || (NEAR_ZERO(b) && check->pdx*part->pdx+check->pdy*part->pdy<0)))
+       {
+        diff-=2;
+       }
+    }
+
+   /* Take absolute value. diff is being used to obtain the */
+   /* min/max values by way of: min(a,b)=(a+b-abs(a-b))/2   */
+
+   if ((diff-=tot) < 0)
+     diff= -diff;
+
+   /* Make sure at least one Seg is on each side of the partition*/
+
+   if (tot+cnt > diff && (cost+=diff) < bestcost)
+    {                   /* We have a new better choice */
+     bestcost = cost;
+     best = part;   	/* Remember which Seg*/
+    }
+   prune:;              /* Early exit and skip past the tests above */
+  }
+ return best;		/* All finished, return best Seg*/
+}
+
 /* Lee Killough 06/1997:
 
    The chances of visplane overflows can be reduced by attemping to
@@ -123,7 +195,7 @@ struct Seg *PickNode_traditional(struct Seg *ts, const bbox_real_t bbox)
    counted if only invisible regions separate the visible areas.
 */
 
-struct Seg *PickNode_visplane(struct Seg *ts, const bbox_real_t bbox)
+struct Seg *PickNode_visplane(struct Seg *ts, const bbox_real_t bbox, int keep_precious)
 {
  struct Seg *best = ts;
  long bestcost=LONG_MAX;
@@ -161,7 +233,7 @@ struct Seg *PickNode_visplane(struct Seg *ts, const bbox_real_t bbox)
            are exhausted. This is used to protect deep water and invisible
            lifts/stairs from being messed up accidentally by splits. */
 
-           if (linedefs[check->linedef].tag >= 900)
+           if (keep_precious && linedefs[check->linedef].tag >= 900)
             cost += factor*64;
 
            cost += factor;
@@ -267,117 +339,3 @@ struct Seg *PickNode_visplane(struct Seg *ts, const bbox_real_t bbox)
 }
 
 
-/*---------------------------------------------------------------------------*
- Calculate the point of intersection of two lines. ps?->pe? & ls?->le?
- returns int xcoord, int ycoord
-*---------------------------------------------------------------------------*/
-
-void ComputeIntersection(double *outx,double *outy)
-{
-	double a,b,a2,b2,l2,w,d;
-
-	double dx,dy,dx2,dy2;
-
-	dx = pex - psx;
-	dy = pey - psy;
-	dx2 = lex - lsx;
-	dy2 = ley - lsy;
-
-	if (NEAR_ZERO(dx) && NEAR_ZERO(dy)) ProgError("Trouble in ComputeIntersection dx,dy");
-/*	l = sqrt((dx*dx) + (dy*dy));  unnecessary - killough */
-	if(NEAR_ZERO(dx2) && NEAR_ZERO(dy2)) ProgError("Trouble in ComputeIntersection dx2,dy2");
-	l2 = sqrt((dx2*dx2) + (dy2*dy2));
-
-	a = dx /* / l */;  /* no normalization of a,b necessary,   */
-	b = dy /* / l */;  /* since division by d in formula for w */
-	a2 = dx2 / l2;     /* cancels it out. */
-	b2 = dy2 / l2;
-	d = b * a2 - a * b2;
-	if (!NEAR_ZERO(d))
-		{
-		w = ((a*(lsy-psy))+(b*(psx-lsx))) / d;
-
-/*		printf("Intersection at (%f,%f)"CRLF,x2+(a2*w),y2+(b2*w));*/
-
-		a = lsx+(a2*w);
-		b = lsy+(b2*w);
-		*outx=a;
-		*outy=b;
-/*
-		modf(a + ((a<0)?-0.5:0.5) ,&w);
-		modf(b + ((b<0)?-0.5:0.5) ,&d);
-		*outx = w;
-		*outy = d;
-*/
-		}
-	else
-		{
-		*outx = lsx;
-		*outy = lsy;
-		}
-}
-
-/*---------------------------------------------------------------------------*
- Because this is (was) used a horrendous amount of times in the inner loops, the
- coordinate of the lines are setup outside of the routine in global variables
- psx,psy,pex,pey = partition line coordinates
- lsx,lsy,lex,ley = checking line coordinates
- The routine returns 'val' which has 3 bits assigned to the the start and 3
- to the end. These allow a decent evaluation of the lines state.
- bit 0,1,2 = checking lines starting point and bits 4,5,6 = end point
- these bits mean 	0,4 = point is on the same line
- 						1,5 = point is to the left of the line
- 						2,6 = point is to the right of the line
- There are some failsafes in here, these mainly check for small errors in the
- side checker.
-*---------------------------------------------------------------------------*/
-
-int DoLinesIntersect(void)
-{
-	double x,y;
-	short int val = 0;
-
-	double dx2,dy2,dx3,dy3,a,b,l;
-
-	dx2 = psx - lsx;									/* Checking line -> partition*/
-	dy2 = psy - lsy;
-	dx3 = psx - lex;
-	dy3 = psy - ley;
-
-	a = pdy*dx2 - pdx*dy2;
-	b = pdy*dx3 - pdx*dy3;
-	if (!NEAR_ZERO(a) && !NEAR_ZERO(b) && signbit(a) != signbit(b))								/* Line is split, just check that*/
-		{
-		ComputeIntersection(&x,&y);
-		dx2 = lsx - x;									/* Find distance from line start*/
-		dy2 = lsy - y;									/* to split point*/
-		if(NEAR_ZERO(dx2) && NEAR_ZERO(dy2)) a = 0;
-		else
-			{
-			l = dx2*dx2+dy2*dy2;				/* If either ends of the split*/
-			if (l < 4) a = 0;							/* are smaller than 2 pixs then*/
-			}												/* assume this starts on part line*/
-		dx3 = lex - x;									/* Find distance from line end*/
-		dy3 = ley - y;									/* to split point*/
-		if(NEAR_ZERO(dx3) && NEAR_ZERO(dy3)) b = 0;
-		else
-			{
-			l = dx3*dx3 + dy3*dy3;					/* same as start of line*/
-			if (l < 4) b = 0;
-			}
-		}
-
-	if(NEAR_ZERO(a)) val = val | 16;								/* start is on middle*/
-         else
-	if(a < 0) val = val | 32;						/* start is on left side*/
-        else
-	/* if(a > 0) */ val = val | 64;						/* start is on right side*/
-
-	if (NEAR_ZERO(b)) val = val | 1;						/* end is on middle*/
-        else
-	if(b < 0) val = val | 2;						/* end is on left side*/
-        else
-	/* if(b > 0) */ val = val | 4;						/* end is on right side*/
-
-	return val;
-}

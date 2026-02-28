@@ -53,6 +53,7 @@ struct SSector *ssectors;
 long            num_ssectors = 0;
 
 struct Pseg    *psegs = NULL;
+struct SegFrac *fsegs = NULL;
 long            num_psegs = 0;
 
 static struct Pnode *pnodes = NULL, *realnodes = NULL;
@@ -64,6 +65,8 @@ unsigned char  *SectorHits;
 
 double          psx, psy, pex, pey, pdx, pdy;
 double          lsx, lsy, lex, ley;
+
+static int      keep_precious;
 
 /*- Prototypes -------------------------------------------------------------*/
 
@@ -142,8 +145,13 @@ add_seg(struct Seg * cs, int n, int fv, int tv,
 
 	cs->angle = ComputeAngle(cs->pdx, cs->pdy);
 
-	if (linedefs[n].tag == 999)
-		cs->angle = (cs->angle + (unsigned) (sd->xoff * (65536.0 / 360.0))) & 65535u;
+	if (linedefs[n].tag == 999 && keep_precious)
+	{
+		cs->angle_shift=sd->xoff * (65536.0 / 360.0);
+		while (cs->angle_shift < 0) cs->angle_shift += (double)65536;
+		cs->angle = fmod(cs->angle + cs->angle_shift, 65536.0);
+	}
+	else cs->angle_shift = 0;
 
 	cs->linedef = n;
 	cs->dist = 0;
@@ -281,10 +289,6 @@ GetSectors(void)
 /* Converts the nodes from a btree into the array format for inclusion in 
  * the .wad. Frees the btree as it goes */
 
-#define FIXED(d)  (long)((d) * (((long)1)<<16))
-#define SHORT(d)  (short int)(0xffff & (FIXED(d) >> 16))
-#define FRAC(d)   (short int)(0xffff & FIXED(d))
-
 static signed short ReverseNodes(struct Node * tn)
 {
 	struct Pnode   *pn, *rn;
@@ -342,13 +346,15 @@ height(const struct Node * tn)
  */
 
 void 
-DoLevel(const char *current_level_name, struct lumplist * current_level)
+DoLevel(const char *current_level_name, struct lumplist * current_level, int keep, int tolerance)
 {
 	struct Seg     *tsegs;
 	static struct Node *nodelist;
 	bbox_real_t mapbound;
 	bbox_t blockmapbound;
 	int i;
+
+	keep_precious = keep;
 
 	Verbose(CRLF"Building nodes on ");
 #ifdef HAVE_CONIO_H
@@ -384,7 +390,7 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 
 	SectorHits = GetMemory(num_sects);
 
-	nodelist = CreateNode(tsegs,mapbound);	/* recursively create nodes */
+	nodelist = CreateNode(tsegs,mapbound,keep,tolerance);	/* recursively create nodes */
 
 #ifdef HAVE_CONIO_H
 	clreol();
@@ -408,6 +414,7 @@ DoLevel(const char *current_level_name, struct lumplist * current_level)
 	add_substream("VERTSUBS", frac, sizeof(struct Vertex) * num_verts);
 
 	add_lump("SEGS", psegs, sizeof(struct Pseg) * num_psegs);
+	add_substream("SEGSSUBS", fsegs, sizeof(struct SegFrac) * num_psegs);
 
 	add_lump("SSECTORS", ssectors, sizeof(struct SSector) * num_ssectors);
 
