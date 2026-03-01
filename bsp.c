@@ -336,39 +336,42 @@ void usage(const char* path) __attribute__((noreturn));
 
 void usage(const char* path) 
 {
- printf(CRLF"BSP v" VERSION );
 #ifdef HAVE_CONIO_H
+ cputs(CRLF"BSP v" VERSION );
  textcolor(LIGHTMAGENTA);
  cputs(FLAVOUR);
  textcolor(LIGHTGRAY);
+ cputs(CRLF CRLF);
 #else
+ printf(CRLF"BSP v" VERSION );
  puts(FLAVOUR);
+ printf(CRLF CRLF);
 #endif
- printf(CRLF CRLF"See the file AUTHORS for a complete list of credits and contributors"CRLF
-        CRLF"Usage: bsp [options] input.wad [[-o] <output.wad>]"CRLF
-        "       (If no output.wad is specified, tmp.wad is written)"CRLF CRLF
-        "Options:"CRLF CRLF
-        "  -factor <nnn>  Changes the cost assigned to SEG splits"CRLF
-        "  -picknode {traditional|visplane"
+ printf ("See the file AUTHORS for a complete list of credits and contributors"CRLF
+         CRLF"Usage: bsp [options] input.wad [[-o] <output.wad>]"CRLF
+         "       (If no output.wad is specified, tmp.wad is written)"CRLF CRLF
+         "Options:"CRLF CRLF
+         "  -factor <nnn>  Changes the cost assigned to SEG splits"CRLF
+         "  -picknode {traditional|visplane"
 #ifdef PICKMODERN
-                                          "|modern"
+                                           "|modern"
 #endif
                                                   "}"CRLF
-        "                 Selects either the traditional nodeline choosing algorithm"CRLF
-        "                 (balance the tree and minimise splits) or Lee's algorithm"CRLF
-        "                 to minimise visplanes (try to balance distinct sector refs)"CRLF
+         "                 Selects either the traditional nodeline choosing algorithm"CRLF
+         "                 (balance the tree and minimise splits) or Lee's algorithm"CRLF
+         "                 to minimise visplanes (try to balance distinct sector refs)"CRLF
 #ifdef PICKMODERN
-        "                 or \"modern\" experimental added specifically to this build"CRLF
+         "                 or \"modern\" experimental added specifically to this build"CRLF
 #endif        
-        "  -blockmap {old|comp}"CRLF
-        "                 Selects either the old straightforward blockmap"CRLF
-        "                 generation, or the new compressed blockmap code"CRLF
-        "  -noreject      Does not clobber reject map"CRLF
-        "  -noblockmap    Leaves existing blockmap alone"CRLF
-        "  -nomagic       Do not keep \"precious\" sectors and lines intact"CRLF
-        "  -frac          Enables saving fraction part of coordinates"CRLF
-        "  -q             Quiet mode (only errors are printed)"CRLF
-       );
+         "  -blockmap {old|comp}"CRLF
+         "                 Selects either the old straightforward blockmap"CRLF
+         "                 generation, or the new compressed blockmap code"CRLF
+         "  -noreject      Does not clobber reject map"CRLF
+         "  -noblockmap    Leaves existing blockmap alone"CRLF
+         "  -nomagic       Do not keep \"precious\" sectors and lines intact"CRLF
+         "  -frac          Enables saving fraction part of coordinates"CRLF
+         "  -q             Quiet mode (only errors are printed)"CRLF
+        );
  exit(1);
 }
 

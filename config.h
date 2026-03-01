@@ -26,7 +26,7 @@
 #define HAVE_ISATTY
 
 /* Define if you have the tmpfile function.  */
-#define HAVE_TMPFILE
+#undef HAVE_TMPFILE
 
 /* Define if you have the unlink function.  */
 #define HAVE_UNLINK
@@ -60,3 +60,4 @@
 #define CRLF "\r\n"
 #endif
 
+#define __extension__
